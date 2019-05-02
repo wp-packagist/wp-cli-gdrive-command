@@ -1,0 +1,41 @@
+{
+  "name": "wp-packagist/wp-cli-gdrive-command",
+  "description": "Using Google Drive Cloud Storage in WP-CLI",
+  "type": "wp-cli-package",
+  "homepage": "https://github.com/wp-packagist/wp-cli-gdrive-command",
+  "license": "MIT",
+  "keywords": [
+    "cli",
+    "wordpress",
+    "wp-cli"
+  ],
+  "authors": [
+    {
+      "name": "Mehrshad Darzi",
+      "email": "mehrshad198@gmail.com"
+    }
+  ],
+  "autoload": {
+    "psr-4": {
+      "WP_CLI_GOOGLE_DRIVE\\": "src/"
+    },
+    "files": [
+      "command.php"
+    ]
+  },
+  "require": {
+    "php": "^5.5 || ^7.0",
+    "wp-packagist/wp-cli-helper": "dev-master"
+  },
+  "extra": {
+    "commands": [
+      "gdrive"
+    ]
+  },
+  "require-dev": {
+    "wp-cli/wp-cli": "^2.0"
+  },
+  "support": {
+    "issues": "https://github.com/wp-packagist/wp-cli-gdrive-command/issues"
+  }
+}
