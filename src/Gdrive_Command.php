@@ -12,6 +12,10 @@ use WP_CLI_Util;
  *
  * ## EXAMPLES
  *
+ *      # User authentication
+ *      $ wp gdrive auth
+ *      Success: User authentication verified.
+ *
  *
  *
  */
@@ -26,9 +30,12 @@ class Gdrive_Command extends \WP_CLI_Command {
 	 *
 	 * ## EXAMPLES
 	 *
-	 *      # Change backup source to gdrive
-	 *      $ wp backup set source gdrive
-	 *      Success: Saved backup source config.
+	 *      # User authentication
+	 *      $ wp gdrive auth
+	 *      Success: User authentication verified.
+	 *
+	 *      # change gmail account
+	 *      $ wp gdrive auth --force
 	 *
 	 * @when before_wp_load
 	 */
@@ -116,8 +123,6 @@ class Gdrive_Command extends \WP_CLI_Command {
 				}
 			}
 		}
-
-
 	}
 
 }
