@@ -8,4 +8,4 @@ if ( ! class_exists( 'WP_CLI' ) ) {
 }
 
 # Register 'gdrive' Command
-\WP_CLI::add_command( 'backup', Gdrive_Command::class );
+\WP_CLI::add_command( 'gdrive', Gdrive_Command::class );
