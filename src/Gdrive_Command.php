@@ -8,7 +8,7 @@ use WP_CLI_Helper;
 use WP_CLI_Util;
 
 /**
- * Google drive cloud storage.
+ * Google Drive Cloud Storage.
  *
  * ## EXAMPLES
  *
@@ -16,6 +16,8 @@ use WP_CLI_Util;
  *      $ wp gdrive auth
  *      Success: User authentication verified.
  *
+ *      # Show list of files and folder in root dir
+ *      $ wp gdrive ls
  *
  *
  */
@@ -123,6 +125,110 @@ class Gdrive_Command extends \WP_CLI_Command {
 				}
 			}
 		}
+	}
+
+	/**
+	 * List of files and folder.
+	 *
+	 * ## OPTIONS
+	 *
+	 * [<path>]
+	 * : show files in custom path.
+	 *
+	 * ## EXAMPLES
+	 *
+	 *      # Show list of files and folder in root dir
+	 *      $ wp gdrive ls
+	 *
+	 *      # show list of files from custom path
+	 *      $ wp gdrive ls /folder/folder/
+	 *
+	 * @when before_wp_load
+	 * @alias list
+	 */
+	function ls( $_, $assoc ) {
+
+		// Current Path
+		$current_path = "/";
+		if ( isset( $_[0] ) and ! empty( $_[0] ) and trim( $_[0] ) != "/" ) {
+			// Current Path
+			$current_path = "/" . trim( WP_CLI_Google_Drive::sanitize_path( $_[0] ), "/" ) . "/";
+
+			// Check Exist Path
+			WP_CLI_Helper::pl_wait_start();
+			$path_id = WP_CLI_Google_Drive::get_id_by_path( $_[0] );
+			if ( $path_id === false ) {
+				WP_CLI::error( "the path is not found in your Google Drive service." );
+			} else {
+				// Check is file not folder
+				if ( $path_id['mimeType'] != WP_CLI_Google_Drive::$folder_mime_type ) {
+					WP_CLI::error( "Your address includes the file." );
+				}
+			}
+		}
+
+		// Show Please Wait
+		if ( ! isset( $path_id ) ) {
+			WP_CLI_Helper::pl_wait_start();
+		}
+
+		// Get List Of File
+		$args = array();
+		if ( isset( $path_id ) ) {
+			$args = array( 'q' => "'" . $path_id['id'] . "' in parents and trashed=false" );
+		}
+		$files = WP_CLI_Google_Drive::file_list( $args );
+
+		// Check Error
+		if ( isset( $files['error'] ) ) {
+			WP_CLI::error( $files['message'] );
+		}
+
+		// Check Empty Dir
+		if ( count( $files ) < 1 ) {
+			WP_CLI::error( "There are no files in this path." );
+		}
+
+		// Show Files
+		self::list_table( $current_path, $files );
+	}
+
+	/**
+	 * Show List Table Of Files
+	 *
+	 * @param array $files
+	 */
+	private static function list_table( $current_path, $files = array() ) {
+
+		// Remove Please Wait
+		WP_CLI_Helper::pl_wait_end();
+
+		// Show Table List
+		$list = array();
+		foreach ( $files as $file ) {
+			$list[] = array(
+				'name'         => WP_CLI_Util::substr( $file['name'], 100 ),
+				'type'         => ( $file['mimeType'] == WP_CLI_Google_Drive::$folder_mime_type ? "folder" : "file" ),
+				'size'         => ( isset( $file['size'] ) ? \WP_CLI_FileSystem::size_format( $file['size'] ) : '-' ),
+				'createdTime'  => ( isset( $file['createdTime'] ) ? self::sanitize_date_time( $file['createdTime'] ) : '-' ),
+				'modifiedTime' => ( isset( $file['modifiedTime'] ) ? self::sanitize_date_time( $file['modifiedTime'] ) : '-' ),
+				'mimeType'     => ( ( isset( $file['mimeType'] ) and $file['mimeType'] != WP_CLI_Google_Drive::$folder_mime_type ) ? $file['mimeType'] : '-' ),
+			);
+		}
+
+		WP_CLI_Helper::create_table( $list );
+	}
+
+	/**
+	 * Sanitize Date time
+	 *
+	 * @param $time
+	 * @return string
+	 */
+	private static function sanitize_date_time( $time ) {
+		$exp          = explode( "T", $time );
+		$explode_time = explode( ".", $exp[1] );
+		return $exp[0] . " " . $explode_time[0];
 	}
 
 }

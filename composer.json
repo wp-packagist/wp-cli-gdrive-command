@@ -1,6 +1,6 @@
 {
   "name": "wp-packagist/wp-cli-gdrive-command",
-  "description": "Using Google Drive Cloud Storage in WP-CLI",
+  "description": "Google Drive Cloud Storage for WP-CLI",
   "type": "wp-cli-package",
   "homepage": "https://github.com/wp-packagist/wp-cli-gdrive-command",
   "license": "MIT",
