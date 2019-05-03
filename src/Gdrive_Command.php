@@ -38,6 +38,15 @@ use WP_CLI_Util;
  *      # Move a file.
  *      $ wp gdrive move /folder/file.mp3 /folder/custom/
  *
+ *      # Show list of files and folder in trash.
+ *      $ wp gdrive trash
+ *
+ *      # Create a new folder.
+ *      $ wp gdrive mkdir music /common/
+ *
+ *      # Restore a file from trash.
+ *      $ wp gdrive restore backup.zip
+ *
  *
  */
 class Gdrive_Command extends \WP_CLI_Command {
@@ -684,8 +693,11 @@ class Gdrive_Command extends \WP_CLI_Command {
 	 *
 	 * ## EXAMPLES
 	 *
-	 *      # Show list of files and folder in trash
+	 *      # Show list of files and folder in trash.
 	 *      $ wp gdrive trash
+	 *
+	 *      # Clear all files in trash.
+	 *      $ wp gdrive trash --clear
 	 *
 	 * @when before_wp_load
 	 */
@@ -734,7 +746,7 @@ class Gdrive_Command extends \WP_CLI_Command {
 	 * <name>
 	 * : folder name.
 	 *
-	 * <path>
+	 * [<path>]
 	 * : folder path.
 	 *
 	 * ## EXAMPLES
@@ -746,12 +758,86 @@ class Gdrive_Command extends \WP_CLI_Command {
 	 */
 	function mkdir( $_, $assoc ) {
 
+		// Show Loading
+		WP_CLI_Helper::pl_wait_start();
 
+		// Check Exist Path
+		if ( ! isset( $_[1] ) || ( isset( $_[1] ) and ( trim( $_[1] ) == "/" || trim( $_[1] ) == "\\" || trim( $_[1] ) == "root" || trim( $_[1] ) == "home" ) ) ) {
+			$ParentId = 'root';
+		} else {
+			$path_id = WP_CLI_Google_Drive::get_id_by_path( $_[1] );
+			if ( $path_id === false ) {
+				WP_CLI::error( "The '" . $_[1] . "' is not found in your Google Drive." );
+			} else {
+				// Check is file not folder
+				if ( $path_id['mimeType'] != WP_CLI_Google_Drive::$folder_mime_type ) {
+					WP_CLI::error( "Your '" . $_[1] . "' path includes the file." );
+				} else {
+					$ParentId = $path_id['id'];
+				}
+			}
+		}
 
-
-
+		// Create folder
+		$folder = WP_CLI_Google_Drive::create_folder( array( 'name' => trim( $_[0] ), 'parentId' => $ParentId ) );
+		WP_CLI_Helper::pl_wait_end();
+		if ( isset( $folder['error'] ) ) {
+			WP_CLI::error( $folder['message'] );
+		} else {
+			WP_CLI::success( "Created '" . $_[0] . "' folder in '" . ( $ParentId == "root" ? $ParentId : trim( $_[1] ) ) . "'." );
+		}
 	}
 
+	/**
+	 * Restore a file and folder from trash.
+	 *
+	 * ## OPTIONS
+	 *
+	 * <name>
+	 * : file or folder name.
+	 *
+	 * ## EXAMPLES
+	 *
+	 *      # Restore a file from trash.
+	 *      $ wp gdrive restore backup.zip
+	 *
+	 * @when before_wp_load
+	 */
+	function restore( $_, $assoc ) {
+
+		// Show Please Wait
+		WP_CLI_Helper::pl_wait_start();
+
+		// Get List Of File in trash
+		$files = WP_CLI_Google_Drive::file_list( array( 'q' => "trashed=true" ) );
+
+		// Check Error
+		if ( isset( $files['error'] ) ) {
+			WP_CLI_Helper::pl_wait_end();
+			WP_CLI::error( $files['message'] );
+		}
+
+		// Check Exist file in trash
+		$fileId = false;
+		foreach ( $files as $file ) {
+			if ( $file['name'] == trim( $_[0] ) ) {
+				$fileId = $file['id'];
+			}
+		}
+		if ( $fileId === false ) {
+			WP_CLI_Helper::pl_wait_end();
+			WP_CLI::error( "Your file or folder does not exist in the trash." );
+		}
+
+		//Restore File
+		$restore = WP_CLI_Google_Drive::file_restore( array( 'fileId' => $fileId ) );
+		WP_CLI_Helper::pl_wait_end();
+		if ( isset( $restore['error'] ) ) {
+			WP_CLI::error( $restore['message'] );
+		} else {
+			WP_CLI::success( "Restored '" . $_[0] . "'." );
+		}
+	}
 
 
 }

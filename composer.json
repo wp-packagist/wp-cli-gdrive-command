@@ -29,7 +29,18 @@
   },
   "extra": {
     "commands": [
-      "gdrive"
+      "gdrive",
+      "gdrive auth",
+      "gdrive ls",
+      "gdrive rm",
+      "gdrive share",
+      "gdrive private",
+      "gdrive rename",
+      "gdrive copy",
+      "gdrive move",
+      "gdrive trash",
+      "gdrive mkdir",
+      "gdrive restore"
     ]
   },
   "require-dev": {
