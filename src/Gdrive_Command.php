@@ -19,6 +19,25 @@ use WP_CLI_Util;
  *      # Show list of files and folder in root dir
  *      $ wp gdrive ls
  *
+ *      # remove file with custom path
+ *      $ wp gdrive rm /folder/file.zip
+ *      Success: Removed File.
+ *
+ *      # get download link a file
+ *      $ wp gdrive share /folder/file.mp3
+ *
+ *      # private a file for disable download link
+ *      $ wp gdrive private /folder/file.mp3
+ *
+ *      # Rename a file.
+ *      $ wp gdrive rename /folder/file.mp3 new.mp3
+ *
+ *      # Copy a file.
+ *      $ wp gdrive copy /folder/file.mp3 /folder/custom/
+ *
+ *      # Move a file.
+ *      $ wp gdrive move /folder/file.mp3 /folder/custom/
+ *
  *
  */
 class Gdrive_Command extends \WP_CLI_Command {
@@ -48,12 +67,12 @@ class Gdrive_Command extends \WP_CLI_Command {
 		$auth = WP_CLI_Google_Drive::auth();
 		if ( $auth === true and ! isset( $assoc['force'] ) ) {
 			$gdrive    = WP_CLI_Google_Drive::get_config();
-			$user_info = WP_CLI_Google_Drive::get_user_info_by_id_token( $gdrive['id_token'] );
+			$user_info = WP_CLI_Google_Drive::get_user_info_by_access_token( $gdrive['access_token'] );
 			if ( ! isset( $user_info['error'] ) ) {
 				WP_CLI_Helper::pl_wait_end();
-				WP_CLI::line( "name: " . $user_info['name'] );
-				WP_CLI::line( "email: " . $user_info['email'] );
-				WP_CLI::line( "locale: " . $user_info['locale'] );
+				WP_CLI::line( "Name: " . $user_info['name'] );
+				WP_CLI::line( "Email: " . $user_info['email'] );
+				WP_CLI::line( "Locale: " . $user_info['locale'] );
 			}
 			exit;
 		}
@@ -111,13 +130,13 @@ class Gdrive_Command extends \WP_CLI_Command {
 
 					// Get User info
 					WP_CLI_Helper::pl_wait_end();
-					$user_info = WP_CLI_Google_Drive::get_user_info_by_id_token( $user_token['id_token'] );
+					$user_info = WP_CLI_Google_Drive::get_user_info_by_access_token( $user_token['access_token'] );
 					if ( ! isset( $user_info['error'] ) ) {
 						WP_CLI_Helper::br();
 						WP_CLI::line( "----" );
-						WP_CLI::line( "name: " . $user_info['name'] );
-						WP_CLI::line( "email: " . $user_info['email'] );
-						WP_CLI::line( "locale: " . $user_info['locale'] );
+						WP_CLI::line( "Name: " . $user_info['name'] );
+						WP_CLI::line( "Email: " . $user_info['email'] );
+						WP_CLI::line( "Locale: " . $user_info['locale'] );
 						WP_CLI::line( "----" );
 						WP_CLI_Helper::br();
 					}
@@ -149,16 +168,16 @@ class Gdrive_Command extends \WP_CLI_Command {
 	function ls( $_, $assoc ) {
 
 		// Current Path
-		$current_path = "/";
+		//$current_path = "/";
 		if ( isset( $_[0] ) and ! empty( $_[0] ) and trim( $_[0] ) != "/" ) {
 			// Current Path
-			$current_path = "/" . trim( WP_CLI_Google_Drive::sanitize_path( $_[0] ), "/" ) . "/";
+			/* $current_path = "/" . trim( WP_CLI_Google_Drive::sanitize_path( $_[0] ), "/" ) . "/"; */
 
 			// Check Exist Path
 			WP_CLI_Helper::pl_wait_start();
 			$path_id = WP_CLI_Google_Drive::get_id_by_path( $_[0] );
 			if ( $path_id === false ) {
-				WP_CLI::error( "the path is not found in your Google Drive service." );
+				WP_CLI::error( "The '" . $_[0] . "' is not found in your Google Drive." );
 			} else {
 				// Check is file not folder
 				if ( $path_id['mimeType'] != WP_CLI_Google_Drive::$folder_mime_type ) {
@@ -190,15 +209,16 @@ class Gdrive_Command extends \WP_CLI_Command {
 		}
 
 		// Show Files
-		self::list_table( $current_path, $files );
+		self::list_table( $files, true );
 	}
 
 	/**
 	 * Show List Table Of Files
 	 *
 	 * @param array $files
+	 * @param bool $show_status
 	 */
-	private static function list_table( $current_path, $files = array() ) {
+	private static function list_table( $files = array(), $show_status = true ) {
 
 		// Remove Please Wait
 		WP_CLI_Helper::pl_wait_end();
@@ -206,14 +226,42 @@ class Gdrive_Command extends \WP_CLI_Command {
 		// Show Table List
 		$list = array();
 		foreach ( $files as $file ) {
-			$list[] = array(
+
+			// Check Last Modified
+			if ( isset( $file['modifiedTime'] ) and ! empty( $file['modifiedTime'] ) ) {
+				$lastModified = self::sanitize_date_time( $file['modifiedTime'] );
+			} else {
+				if ( isset( $file['createdTime'] ) and ! empty( $file['createdTime'] ) ) {
+					$lastModified = self::sanitize_date_time( $file['createdTime'] );
+				} else {
+					$lastModified = "-";
+				}
+			}
+
+			// Check File Status
+			if ( $show_status ) {
+				$status = 'private';
+				if ( isset( $file['permissions'] ) ) {
+					foreach ( $file['permissions'] as $permission ) {
+						if ( $permission['id'] == WP_CLI_Google_Drive::$public_permission_id ) {
+							$status = 'public';
+						}
+					}
+				}
+			}
+
+			// Add To List
+			$arg_file = array(
 				'name'         => WP_CLI_Util::substr( $file['name'], 100 ),
 				'type'         => ( $file['mimeType'] == WP_CLI_Google_Drive::$folder_mime_type ? "folder" : "file" ),
 				'size'         => ( isset( $file['size'] ) ? \WP_CLI_FileSystem::size_format( $file['size'] ) : '-' ),
-				'createdTime'  => ( isset( $file['createdTime'] ) ? self::sanitize_date_time( $file['createdTime'] ) : '-' ),
-				'modifiedTime' => ( isset( $file['modifiedTime'] ) ? self::sanitize_date_time( $file['modifiedTime'] ) : '-' ),
-				'mimeType'     => ( ( isset( $file['mimeType'] ) and $file['mimeType'] != WP_CLI_Google_Drive::$folder_mime_type ) ? $file['mimeType'] : '-' ),
+				'lastModified' => $lastModified,
+				'mimeType'     => ( ( isset( $file['mimeType'] ) and $file['mimeType'] != WP_CLI_Google_Drive::$folder_mime_type ) ? str_replace( "application/vnd.", "", $file['mimeType'] ) : '-' ),
 			);
+			if ( $show_status and isset( $status ) ) {
+				$arg_file['status'] = $status;
+			}
+			$list[] = $arg_file;
 		}
 
 		WP_CLI_Helper::create_table( $list );
@@ -230,5 +278,480 @@ class Gdrive_Command extends \WP_CLI_Command {
 		$explode_time = explode( ".", $exp[1] );
 		return $exp[0] . " " . $explode_time[0];
 	}
+
+	/**
+	 * Remove File or folder By Path.
+	 *
+	 * ## OPTIONS
+	 *
+	 * <path>
+	 * : file or folder path.
+	 *
+	 * [--trash]
+	 * : Move file to trash.
+	 *
+	 * [--force]
+	 * : Force removing file and folder without question.
+	 *
+	 * ## EXAMPLES
+	 *
+	 *      # remove file with custom path
+	 *      $ wp gdrive rm /folder/file.zip
+	 *      Success: Removed File.
+	 *
+	 *      # Move file to trash.
+	 *      $ wp gdrive rm /folder/file.zip --trash
+	 *      Success: Moved file to trash.
+	 *
+	 *      # remove dir with force
+	 *      $ wp gdrive ls /folder/ --force
+	 *      Success: Removed Folder.
+	 *
+	 * @when before_wp_load
+	 * @alias remove
+	 */
+	function rm( $_, $assoc ) {
+
+		// Get Path
+		if ( trim( $_[0] ) == "/" || trim( $_[0] ) == "\\" || trim( $_[0] ) == "root" ) {
+			WP_CLI::error( "You can not delete the root folder." );
+		}
+
+		// Check Exist Path
+		WP_CLI_Helper::pl_wait_start();
+		$path_id = WP_CLI_Google_Drive::get_id_by_path( $_[0] );
+		if ( $path_id === false ) {
+			WP_CLI_Helper::pl_wait_end();
+			WP_CLI::error( "The '" . $_[0] . "' is not found in your Google Drive." );
+		}
+
+		// Check path is file or folder
+		$type = "file";
+		if ( $path_id['mimeType'] == WP_CLI_Google_Drive::$folder_mime_type ) {
+			$type = "folder";
+		}
+
+		// Check confirm is not Force
+		if ( ! isset( $assoc['force'] ) ) {
+			WP_CLI_Helper::pl_wait_end();
+			WP_CLI::confirm( "Are you sure you want to " . ( isset( $assoc['trash'] ) ? "move to trash" : "removed" ) . " the " . $type . " ?" );
+		}
+
+		WP_CLI_Helper::pl_wait_start();
+
+		// Prepare remove arg
+		$arg = array( 'fileId' => $path_id['id'] );
+		if ( isset( $assoc['trash'] ) ) {
+			$arg['trashed'] = true;
+		}
+
+		// Remove action
+		$remove = WP_CLI_Google_Drive::file_remove( $arg );
+		WP_CLI_Helper::pl_wait_end();
+		if ( isset( $remove['error'] ) ) {
+			WP_CLI::error( $remove['message'] );
+		} else {
+			WP_CLI::success( ( isset( $assoc['trash'] ) ? "The '" . trim( $_[0] ) . "' moved to trash." : "Removed {$type}." ) );
+		}
+
+	}
+
+	/**
+	 * Get Download Link a file or folder.
+	 *
+	 * ## OPTIONS
+	 *
+	 * <path>
+	 * : file or folder path.
+	 *
+	 * ## EXAMPLES
+	 *
+	 *      # get download link a file
+	 *      $ wp gdrive share /folder/file.mp3
+	 *
+	 *      # get share link a folder
+	 *      $ wp gdrive share /folder/folder/
+	 *
+	 * @when before_wp_load
+	 */
+	function share( $_, $assoc ) {
+
+		// Get Path
+		if ( trim( $_[0] ) == "/" || trim( $_[0] ) == "\\" || trim( $_[0] ) == "root" ) {
+			WP_CLI::error( "You can not get the root folder share link." );
+		}
+
+		// Check Exist Path
+		WP_CLI_Helper::pl_wait_start();
+		$path_id = WP_CLI_Google_Drive::get_id_by_path( $_[0] );
+		if ( $path_id === false ) {
+			WP_CLI_Helper::pl_wait_end();
+			WP_CLI::error( "The '" . $_[0] . "' is not found in your Google Drive." );
+		}
+
+		// Add Share Permission
+		$share_link = WP_CLI_Google_Drive::file_permission( array( 'fileId' => $path_id['id'], 'permission' => 'public' ) );
+		if ( isset( $share_link['error'] ) ) {
+			WP_CLI_Helper::pl_wait_end();
+			WP_CLI::error( $share_link['message'] );
+		} else {
+
+			// Get Share Url
+			$file_inf = WP_CLI_Google_Drive::file_get( array( 'fileId' => $path_id['id'] ) );
+			WP_CLI_Helper::pl_wait_end();
+			if ( isset( $file_inf['error'] ) ) {
+				WP_CLI::error( $file_inf['message'] );
+			} else {
+				if ( isset( $file_inf['webContentLink'] ) ) {
+					WP_CLI::line( WP_CLI_Helper::color( "Download Link: ", "Y" ) . $file_inf['webContentLink'] );
+				}
+				if ( isset( $file_inf['webViewLink'] ) ) {
+					WP_CLI::line( WP_CLI_Helper::color( "WebView " . ( isset( $file_inf['webContentLink'] ) ? " " : "" ) . "Link: ", "Y" ) . $file_inf['webViewLink'] );
+				}
+				exit;
+			}
+		}
+	}
+
+	/**
+	 * Private a file or folder.
+	 *
+	 * ## OPTIONS
+	 *
+	 * <path>
+	 * : file or folder path.
+	 *
+	 * ## EXAMPLES
+	 *
+	 *      # private a file for disable download link
+	 *      $ wp gdrive private /folder/file.mp3
+	 *
+	 *      # private a folder by path
+	 *      $ wp gdrive private /folder/folder/
+	 *
+	 * @when before_wp_load
+	 * @alias private
+	 */
+	function _private( $_, $assoc ) {
+
+		// Get Path
+		if ( trim( $_[0] ) == "/" || trim( $_[0] ) == "\\" || trim( $_[0] ) == "root" ) {
+			WP_CLI::error( "You can not get the root folder share link." );
+		}
+
+		// Check Exist Path
+		WP_CLI_Helper::pl_wait_start();
+		$path_id = WP_CLI_Google_Drive::get_id_by_path( $_[0] );
+		if ( $path_id === false ) {
+			WP_CLI_Helper::pl_wait_end();
+			WP_CLI::error( "The '" . $_[0] . "' is not found in your Google Drive." );
+		}
+
+		// Check path is file or folder
+		$type = "file";
+		if ( $path_id['mimeType'] == WP_CLI_Google_Drive::$folder_mime_type ) {
+			$type = "folder";
+		}
+
+		// Private a File
+		$private_file = WP_CLI_Google_Drive::file_permission( array( 'fileId' => $path_id['id'], 'permission' => 'private' ) );
+		if ( isset( $private_file['error'] ) ) {
+			WP_CLI_Helper::pl_wait_end();
+			WP_CLI::error( $private_file['message'] );
+		} else {
+			WP_CLI::success( "The " . $type . " was the private and disable download link." );
+		}
+	}
+
+	/**
+	 * Rename a file or folder.
+	 *
+	 * ## OPTIONS
+	 *
+	 * <path>
+	 * : file or folder path.
+	 *
+	 * <new_name>
+	 * : new name of the file or folder.
+	 *
+	 * ## EXAMPLES
+	 *
+	 *      # Rename a file.
+	 *      $ wp gdrive rename /folder/file.mp3 new.mp3
+	 *
+	 *      # Rename a folder
+	 *      $ wp gdrive rename /folder/folder/ new_folder_name
+	 *
+	 * @when before_wp_load
+	 * @alias ren
+	 */
+	function rename( $_, $assoc ) {
+
+		// Get Path
+		if ( trim( $_[0] ) == "/" || trim( $_[0] ) == "\\" || trim( $_[0] ) == "root" ) {
+			WP_CLI::error( "You can not get the root folder share link." );
+		}
+
+		// Check Exist Path
+		WP_CLI_Helper::pl_wait_start();
+		$path_id = WP_CLI_Google_Drive::get_id_by_path( $_[0] );
+		if ( $path_id === false ) {
+			WP_CLI_Helper::pl_wait_end();
+			WP_CLI::error( "The '" . $_[0] . "' is not found in your Google Drive." );
+		}
+
+		// Check path is file or folder
+		$type = "file";
+		if ( $path_id['mimeType'] == WP_CLI_Google_Drive::$folder_mime_type ) {
+			$type = "folder";
+		}
+
+		// Renamed the file
+		$rename_file = WP_CLI_Google_Drive::file_rename( array( 'fileId' => $path_id['id'], 'new_name' => trim( $_[1] ) ) );
+		WP_CLI_Helper::pl_wait_end();
+		if ( isset( $rename_file['error'] ) ) {
+			WP_CLI::error( $rename_file['message'] );
+		} else {
+			WP_CLI::success( "Renamed '" . $_[0] . "' " . $type . " to " . WP_CLI_Helper::color( trim( $_[1] ), "Y" ) . "." );
+		}
+	}
+
+	/**
+	 * Copy a file or folder.
+	 *
+	 * ## OPTIONS
+	 *
+	 * <path>
+	 * : file or folder path.
+	 *
+	 * <new_path>
+	 * : new path of the file that is contain a folder path.
+	 *
+	 * ## EXAMPLES
+	 *
+	 *      # Copy a file.
+	 *      $ wp gdrive copy /folder/file.mp3 /folder/custom/
+	 *
+	 *      # Copy a folder.
+	 *      $ wp gdrive copy /folder/name/ /custom
+	 *
+	 * @when before_wp_load
+	 * @alias cp
+	 */
+	function copy( $_, $assoc ) {
+
+		// Get Path
+		if ( trim( $_[0] ) == "/" || trim( $_[0] ) == "\\" || trim( $_[0] ) == "root" || trim( $_[0] ) == "home" ) {
+			WP_CLI::error( "You can not copy the root folder." );
+		}
+		WP_CLI_Helper::pl_wait_start();
+
+		// Check Exist Path
+		$path_id = WP_CLI_Google_Drive::get_id_by_path( $_[0] );
+		if ( $path_id === false ) {
+			WP_CLI_Helper::pl_wait_end();
+			WP_CLI::error( "The '" . $_[0] . "' is not found in your Google Drive." );
+		}
+
+		// Check file or folder
+		$type = "file";
+		if ( $path_id['mimeType'] == WP_CLI_Google_Drive::$folder_mime_type ) {
+			$type = "folder";
+		}
+
+		// Check new path
+		$new_path = 'root';
+		if ( trim( $_[1] ) == "/" || trim( $_[1] ) == "\\" || trim( $_[1] ) == "root" || trim( $_[1] ) == "home" ) {
+			$new_path_id = 'root';
+		} else {
+			$new_path_id = WP_CLI_Google_Drive::get_id_by_path( $_[1] );
+			if ( $new_path_id === false ) {
+				WP_CLI_Helper::pl_wait_end();
+				WP_CLI::error( "The '" . $_[1] . "' is not found in your Google Drive." );
+			} else {
+
+				// new Path only folder
+				if ( $new_path_id['mimeType'] != WP_CLI_Google_Drive::$folder_mime_type ) {
+					WP_CLI::error( "The new path must be a folder." );
+				}
+
+				// Get New Path id
+				$new_path    = trim( $_[1] );
+				$new_path_id = $new_path_id['id'];
+			}
+		}
+
+		// Copy
+		$copy = WP_CLI_Google_Drive::file_copy( array( 'fileId' => $path_id['id'], 'toId' => $new_path_id ) );
+		WP_CLI_Helper::pl_wait_end();
+		if ( isset( $copy['error'] ) ) {
+			WP_CLI::error( $copy['message'] );
+		} else {
+			WP_CLI::success( "The '" . $_[0] . "' " . $type . " copied to '" . trim( $new_path ) . "'." );
+		}
+	}
+
+	/**
+	 * Move a file or folder.
+	 *
+	 * ## OPTIONS
+	 *
+	 * <path>
+	 * : file or folder path.
+	 *
+	 * <new_path>
+	 * : new path of the file that is contain a folder path.
+	 *
+	 * ## EXAMPLES
+	 *
+	 *      # Move a file.
+	 *      $ wp gdrive move /folder/file.mp3 /folder/custom/
+	 *
+	 *      # Move a folder.
+	 *      $ wp gdrive move /folder/name/ /custom
+	 *
+	 * @when before_wp_load
+	 * @alias mv
+	 */
+	function move( $_, $assoc ) {
+
+		// Get Path
+		if ( trim( $_[0] ) == "/" || trim( $_[0] ) == "\\" || trim( $_[0] ) == "root" || trim( $_[0] ) == "home" ) {
+			WP_CLI::error( "You can not move the root folder." );
+		}
+		WP_CLI_Helper::pl_wait_start();
+
+		// Check Exist Path
+		$path_id = WP_CLI_Google_Drive::get_id_by_path( $_[0] );
+		if ( $path_id === false ) {
+			WP_CLI_Helper::pl_wait_end();
+			WP_CLI::error( "The '" . $_[0] . "' is not found in your Google Drive." );
+		}
+
+		// Check file or folder
+		$type = "file";
+		if ( $path_id['mimeType'] == WP_CLI_Google_Drive::$folder_mime_type ) {
+			$type = "folder";
+		}
+
+		// Check new path
+		$new_path = 'root';
+		if ( trim( $_[1] ) == "/" || trim( $_[1] ) == "\\" || trim( $_[1] ) == "root" || trim( $_[1] ) == "home" ) {
+			$new_path_id = 'root';
+		} else {
+			$new_path_id = WP_CLI_Google_Drive::get_id_by_path( $_[1] );
+			if ( $new_path_id === false ) {
+				WP_CLI_Helper::pl_wait_end();
+				WP_CLI::error( "The '" . $_[1] . "' is not found in your Google Drive." );
+			} else {
+
+				// new Path only folder
+				if ( $new_path_id['mimeType'] != WP_CLI_Google_Drive::$folder_mime_type ) {
+					WP_CLI::error( "The new path must be a folder." );
+				}
+
+				// Get New Path id
+				$new_path    = trim( $_[1] );
+				$new_path_id = $new_path_id['id'];
+			}
+		}
+
+		// Get current file parent
+		$file_inf = WP_CLI_Google_Drive::file_get( array( 'fileId' => $path_id['id'] ) );
+		if ( isset( $file_inf['error'] ) ) {
+			WP_CLI::error( $file_inf['message'] );
+		} else {
+			$previousParents = join( ',', $file_inf['parents'] );
+		}
+
+		// Move
+		$move = WP_CLI_Google_Drive::file_move( array( 'fileId' => $path_id['id'], 'currentParent' => $previousParents, 'toId' => $new_path_id ) );
+		WP_CLI_Helper::pl_wait_end();
+		if ( isset( $move['error'] ) ) {
+			WP_CLI::error( $move['message'] );
+		} else {
+			WP_CLI::success( "The '" . $_[0] . "' " . $type . " moved to '" . trim( $new_path ) . "'." );
+		}
+	}
+
+	/**
+	 * List of files and folder in trash.
+	 *
+	 * ## OPTIONS
+	 *
+	 * [--clear]
+	 * : empty trash.
+	 *
+	 * ## EXAMPLES
+	 *
+	 *      # Show list of files and folder in trash
+	 *      $ wp gdrive trash
+	 *
+	 * @when before_wp_load
+	 */
+	function trash( $_, $assoc ) {
+
+		// Check empty
+		if ( isset( $assoc['clear'] ) ) {
+			WP_CLI::confirm( "Are you sure you want to remove all files in trash ?" );
+			WP_CLI_Helper::pl_wait_start();
+			$remove = WP_CLI_Google_Drive::file_remove( array( 'fileId' => 'trash' ) );
+			WP_CLI_Helper::pl_wait_end();
+			if ( isset( $remove['error'] ) ) {
+				WP_CLI::error( $remove['message'] );
+			} else {
+				WP_CLI::success( "Removed all files in trash." );
+			}
+
+			exit;
+		}
+
+		// Show Please Wait
+		WP_CLI_Helper::pl_wait_start();
+
+		// Get List Of File in trash
+		$files = WP_CLI_Google_Drive::file_list( array( 'q' => "trashed=true" ) );
+
+		// Check Error
+		if ( isset( $files['error'] ) ) {
+			WP_CLI::error( $files['message'] );
+		}
+
+		// Check Empty Dir
+		if ( count( $files ) < 1 ) {
+			WP_CLI::error( "Trash is empty." );
+		}
+
+		// Show Files
+		self::list_table( $files, false );
+	}
+
+	/**
+	 * Create folder in Google Drive.
+	 *
+	 * ## OPTIONS
+	 *
+	 * <name>
+	 * : folder name.
+	 *
+	 * <path>
+	 * : folder path.
+	 *
+	 * ## EXAMPLES
+	 *
+	 *      # Create a new folder.
+	 *      $ wp gdrive mkdir music /common/
+	 *
+	 * @when before_wp_load
+	 */
+	function mkdir( $_, $assoc ) {
+
+
+
+
+
+	}
+
+
 
 }
