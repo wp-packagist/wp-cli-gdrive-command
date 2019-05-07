@@ -47,6 +47,10 @@ use WP_CLI_Util;
  *      # Restore a file from trash.
  *      $ wp gdrive restore backup.zip
  *
+ *      # Download backup.zip file from root dir in Google Drive.
+ *      $ wp gdrive get backup.zip
+ *      Success: Download completed.
+ *
  *
  */
 class Gdrive_Command extends \WP_CLI_Command {
@@ -74,9 +78,8 @@ class Gdrive_Command extends \WP_CLI_Command {
 		// Sign in new user if not Force
 		WP_CLI_Helper::pl_wait_start();
 		$auth = WP_CLI_Google_Drive::auth();
-		if ( $auth === true and ! isset( $assoc['force'] ) ) {
-			$gdrive    = WP_CLI_Google_Drive::get_config();
-			$user_info = WP_CLI_Google_Drive::get_user_info_by_access_token( $gdrive['access_token'] );
+		if ( $auth['status'] === true and ! isset( $assoc['force'] ) ) {
+			$user_info = WP_CLI_Google_Drive::get_user_info_by_access_token( $auth['access_token'] );
 			if ( ! isset( $user_info['error'] ) ) {
 				WP_CLI_Helper::pl_wait_end();
 				WP_CLI::line( "Name: " . $user_info['name'] );
@@ -177,10 +180,7 @@ class Gdrive_Command extends \WP_CLI_Command {
 	function ls( $_, $assoc ) {
 
 		// Current Path
-		//$current_path = "/";
 		if ( isset( $_[0] ) and ! empty( $_[0] ) and trim( $_[0] ) != "/" ) {
-			// Current Path
-			/* $current_path = "/" . trim( WP_CLI_Google_Drive::sanitize_path( $_[0] ), "/" ) . "/"; */
 
 			// Check Exist Path
 			WP_CLI_Helper::pl_wait_start();
@@ -219,61 +219,6 @@ class Gdrive_Command extends \WP_CLI_Command {
 
 		// Show Files
 		self::list_table( $files, true );
-	}
-
-	/**
-	 * Show List Table Of Files
-	 *
-	 * @param array $files
-	 * @param bool $show_status
-	 */
-	private static function list_table( $files = array(), $show_status = true ) {
-
-		// Remove Please Wait
-		WP_CLI_Helper::pl_wait_end();
-
-		// Show Table List
-		$list = array();
-		foreach ( $files as $file ) {
-
-			// Check Last Modified
-			if ( isset( $file['modifiedTime'] ) and ! empty( $file['modifiedTime'] ) ) {
-				$lastModified = self::sanitize_date_time( $file['modifiedTime'] );
-			} else {
-				if ( isset( $file['createdTime'] ) and ! empty( $file['createdTime'] ) ) {
-					$lastModified = self::sanitize_date_time( $file['createdTime'] );
-				} else {
-					$lastModified = "-";
-				}
-			}
-
-			// Check File Status
-			if ( $show_status ) {
-				$status = 'private';
-				if ( isset( $file['permissions'] ) ) {
-					foreach ( $file['permissions'] as $permission ) {
-						if ( $permission['id'] == WP_CLI_Google_Drive::$public_permission_id ) {
-							$status = 'public';
-						}
-					}
-				}
-			}
-
-			// Add To List
-			$arg_file = array(
-				'name'         => WP_CLI_Util::substr( $file['name'], 100 ),
-				'type'         => ( $file['mimeType'] == WP_CLI_Google_Drive::$folder_mime_type ? "folder" : "file" ),
-				'size'         => ( isset( $file['size'] ) ? \WP_CLI_FileSystem::size_format( $file['size'] ) : '-' ),
-				'lastModified' => $lastModified,
-				'mimeType'     => ( ( isset( $file['mimeType'] ) and $file['mimeType'] != WP_CLI_Google_Drive::$folder_mime_type ) ? str_replace( "application/vnd.", "", $file['mimeType'] ) : '-' ),
-			);
-			if ( $show_status and isset( $status ) ) {
-				$arg_file['status'] = $status;
-			}
-			$list[] = $arg_file;
-		}
-
-		WP_CLI_Helper::create_table( $list );
 	}
 
 	/**
@@ -439,7 +384,7 @@ class Gdrive_Command extends \WP_CLI_Command {
 	 *      $ wp gdrive private /folder/folder/
 	 *
 	 * @when before_wp_load
-	 * @alias private
+	 * @subcommand private
 	 */
 	function _private( $_, $assoc ) {
 
@@ -836,6 +781,266 @@ class Gdrive_Command extends \WP_CLI_Command {
 			WP_CLI::error( $restore['message'] );
 		} else {
 			WP_CLI::success( "Restored '" . $_[0] . "'." );
+		}
+	}
+
+	/**
+	 * Download a file.
+	 *
+	 * ## OPTIONS
+	 *
+	 * <path>
+	 * : The path of file for Download.
+	 *
+	 * [<saveTo>]
+	 * : The address where the file will be saved.
+	 *
+	 * [--name=<file_name>]
+	 * : New file name to save.
+	 *
+	 * [--e]
+	 * : Extract Zip file after downloading.
+	 *
+	 * ## EXAMPLES
+	 *
+	 *      # Download backup.zip file from root dir in Google Drive.
+	 *      $ wp gdrive get backup.zip
+	 *      Success: Download completed.
+	 *
+	 *      # Download backup.zip file and save to custom dir.
+	 *      $ wp gdrive get backup.zip /folder/ --name=package.zip
+	 *      Success: Download completed.
+	 *
+	 *      # Automatic unzip file after download.
+	 *      $ wp gdrive get backup.zip /folder/ --e
+	 *      Success: Completed download and extract file.
+	 *
+	 * @when before_wp_load
+	 * @alias dl
+	 */
+	function get( $_, $assoc ) {
+
+		// Show Loading
+		WP_CLI_Helper::pl_wait_start();
+
+		// Check SaveTo Path
+		if ( ! isset( $_[1] ) || ( isset( $_[1] ) and ( trim( $_[1] ) == "/" || trim( $_[1] ) == "\\" ) ) ) {
+			$saveTo = WP_CLI_Util::getcwd();
+		} else {
+			$saveTo    = $_[1];
+			$path_info = pathinfo( $_[1] );
+			if ( isset( $path_info['extension'] ) ) {
+				$saveTo = $path_info['dirname'];
+			}
+			$saveTo = \WP_CLI_FileSystem::path_join( WP_CLI_Util::getcwd(), $saveTo );
+		}
+
+		// Check File Exist For Download
+		$file = WP_CLI_Google_Drive::get_id_by_path( $_[0] );
+		if ( $file === false ) {
+			WP_CLI_Helper::pl_wait_end();
+			WP_CLI::error( "The '" . $_[0] . "' is not found in your Google Drive." );
+		} else {
+
+			// Check is file not folder
+			if ( $file['mimeType'] == WP_CLI_Google_Drive::$folder_mime_type ) {
+				WP_CLI_Helper::pl_wait_end();
+				WP_CLI::error( "Your '" . $_[0] . "' path includes the folder." );
+			}
+		}
+
+		// Check file is Original OR Google Doc or Not Downloadable.
+		if ( isset( $file['originalFilename'] ) ) {
+			$type_file = 'original';
+		} else {
+			if ( isset( $file['exportLinks'] ) ) {
+				$type_file = 'googleDoc';
+			} else {
+				WP_CLI_Helper::pl_wait_end();
+				WP_CLI::log( WP_CLI_Helper::color( "WebViewLink: ", "Y" ) . $file['webViewLink'] );
+				exit;
+			}
+		}
+
+		// Sanitize file name
+		$file_name = $file['name'];
+		if ( isset( $assoc['name'] ) ) {
+			if ( $type_file == "googleDoc" ) {
+				$assoc['name'] = pathinfo( $assoc['name'], PATHINFO_FILENAME );
+			}
+			$file_name = preg_replace( WP_CLI_Google_Drive::$preg_filename, '', $assoc['name'] );
+		}
+
+		// Set Global File
+		if ( isset( $file['size'] ) ) {
+			$GLOBALS['GOOGLE_DRIVE_STREAM_BYTE'] = $file['size'];
+		}
+
+		// Download Original File
+		if ( $type_file == "original" ) {
+
+			WP_CLI_Helper::pl_wait_end();
+			$download_file = WP_CLI_Google_Drive::download_original_file( array(
+				'fileId'   => $file['id'],
+				'path'     => $saveTo,
+				'filename' => $file_name,
+				'hook'     => array( __CLASS__, "cli_download_progress" )
+			) );
+			if ( isset( $download_file['error'] ) ) {
+				WP_CLI::error( $download_file['message'] );
+			} else {
+				self::save_file( \WP_CLI_FileSystem::path_join( $saveTo, $file_name ), $assoc );
+			}
+
+		} else {
+
+			// Get List Of Export Link
+			WP_CLI_Helper::pl_wait_end();
+			WP_CLI_Helper::br();
+			$i                = 1;
+			$export_type_list = array();
+			foreach ( $file['exportLinks'] as $key => $value ) {
+
+				// Get file Extension
+				$parse_url = parse_url( $value );
+				parse_str( $parse_url['query'], $url_query );
+				$extension = $url_query['exportFormat'];
+
+				// Log
+				WP_CLI::line( "{$i}. " . WP_CLI_Helper::color( $file_name . "." . $extension, "Y" ) );
+				WP_CLI::line( WP_CLI_Helper::color( "     MimeType: " . $key, "B" ) );
+				WP_CLI_Helper::br();
+
+				//Push to list
+				$export_type_list[ $i ] = array(
+					'mimeType'  => $key,
+					'extension' => $extension,
+					'filename'  => $file_name . '.' . $extension
+				);
+
+				$i ++;
+			}
+			WP_CLI_Helper::br();
+
+			WP_CLI_Util::define_stdin();
+			while ( true ) {
+				echo "Please type the number list and press enter key: ";
+				$ID = fread( STDIN, 80 );
+				if ( is_numeric( trim( $ID ) ) and $ID <= $i and $ID > 0 ) {
+					break;
+				}
+			}
+			if ( isset( $ID ) ) {
+				WP_CLI_Helper::pl_wait_start();
+
+				// Get MimeType For Download
+				$file_inf = $export_type_list[ (int) $ID ];
+
+				// Start Download
+				WP_CLI_Helper::pl_wait_end();
+				$download_file = WP_CLI_Google_Drive::export_file( array(
+					'fileId'   => $file['id'],
+					'path'     => $saveTo,
+					'filename' => $file_inf['filename'],
+					'mimeType' => $file_inf['mimeType'],
+					'hook'     => array( __CLASS__, "cli_download_progress" )
+				) );
+				if ( isset( $download_file['error'] ) ) {
+					WP_CLI::error( $download_file['message'] );
+				} else {
+					self::save_file( \WP_CLI_FileSystem::path_join( $saveTo, $file_inf['filename'] ), $assoc );
+				}
+			}
+		}
+	}
+
+	/**
+	 * Show List Table Of Files
+	 *
+	 * @param array $files
+	 * @param bool $show_status
+	 */
+	private static function list_table( $files = array(), $show_status = true ) {
+
+		// Remove Please Wait
+		WP_CLI_Helper::pl_wait_end();
+
+		// Show Table List
+		$list = array();
+		foreach ( $files as $file ) {
+
+			// Check Last Modified
+			if ( isset( $file['modifiedTime'] ) and ! empty( $file['modifiedTime'] ) ) {
+				$lastModified = self::sanitize_date_time( $file['modifiedTime'] );
+			} else {
+				if ( isset( $file['createdTime'] ) and ! empty( $file['createdTime'] ) ) {
+					$lastModified = self::sanitize_date_time( $file['createdTime'] );
+				} else {
+					$lastModified = "-";
+				}
+			}
+
+			// Check File Status
+			if ( $show_status ) {
+				$status = 'private';
+				if ( isset( $file['permissions'] ) ) {
+					foreach ( $file['permissions'] as $permission ) {
+						if ( $permission['id'] == WP_CLI_Google_Drive::$public_permission_id ) {
+							$status = 'public';
+						}
+					}
+				}
+			}
+
+			// Get Type of file
+			if ( $file['mimeType'] == WP_CLI_Google_Drive::$folder_mime_type ) {
+				$type = 'Folder';
+			} else {
+				if ( isset( $file['originalFilename'] ) and ! isset( $file['exportLinks'] ) ) {
+					$type = 'File';
+				} else {
+					$type = 'Google Doc';
+				}
+			}
+
+			// Add To List
+			$arg_file = array(
+				'name'         => WP_CLI_Util::substr( $file['name'], 100 ),
+				'type'         => $type,
+				'size'         => ( isset( $file['size'] ) ? \WP_CLI_FileSystem::size_format( $file['size'] ) : '-' ),
+				'lastModified' => $lastModified
+			);
+			if ( $show_status and isset( $status ) ) {
+				$arg_file['status'] = $status;
+			}
+			$list[] = $arg_file;
+		}
+
+		WP_CLI_Helper::create_table( $list );
+	}
+
+	public static function save_file( $full_path, $assoc ) {
+
+		$path_info = pathinfo( $full_path );
+		if ( isset( $path_info['extension'] ) and $path_info['extension'] == "zip" and isset( $assoc['e'] ) ) {
+			echo "Extracting file ...." . str_repeat( " ", 20 ) . "\r";
+			$unzip = \WP_CLI_FileSystem::unzip( $full_path );
+			if ( $unzip === true ) {
+				\WP_CLI_FileSystem::remove_file( $full_path );
+				WP_CLI::success( "Completed download and extract file." . str_repeat( " ", 15 ) );
+			} else {
+				WP_CLI::error( "Error extracting zip file" );
+			}
+		} else {
+			WP_CLI::success( "Download Completed." . str_repeat( " ", 10 ) );
+		}
+
+	}
+
+	public static function cli_download_progress( $data, $response_bytes, $response_byte_limit ) {
+		if ( isset( $GLOBALS['GOOGLE_DRIVE_STREAM_BYTE'] ) ) {
+			$p = ceil( round( ( $response_bytes / $GLOBALS['GOOGLE_DRIVE_STREAM_BYTE'] ) * 100, 2 ) );
+			echo WP_CLI_Helper::color( "Download: " . \WP_CLI_FileSystem::size_format( $response_bytes, 2 ) . " / " . \WP_CLI_FileSystem::size_format( $GLOBALS['GOOGLE_DRIVE_STREAM_BYTE'] ), "Y" ) . " " . WP_CLI_Helper::color( "[$p%]", "B" ) . "        \r";
 		}
 	}
 

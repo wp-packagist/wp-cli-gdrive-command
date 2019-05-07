@@ -40,7 +40,8 @@
       "gdrive move",
       "gdrive trash",
       "gdrive mkdir",
-      "gdrive restore"
+      "gdrive restore",
+      "gdrive get"
     ]
   },
   "require-dev": {
