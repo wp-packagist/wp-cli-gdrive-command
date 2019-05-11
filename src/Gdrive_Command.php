@@ -41,8 +41,8 @@ use WP_CLI_Util;
  *      # Show list of files and folder in trash.
  *      $ wp gdrive trash
  *
- *      # Create a new folder.
- *      $ wp gdrive mkdir music /common/
+ *      # Create a new folder in root.
+ *      $ wp gdrive mkdir wordpress
  *
  *      # Restore a file from trash.
  *      $ wp gdrive restore backup.zip
@@ -51,6 +51,13 @@ use WP_CLI_Util;
  *      $ wp gdrive get backup.zip
  *      Success: Download completed.
  *
+ *      # Upload backup.zip file to root dir in Google Drive.
+ *      $ wp gdrive upload backup.zip
+ *      Success: Upload completed.
+ *
+ *      # Automatic create zip archive from the /wp-content/ folder and upload to custom dir.
+ *      $ wp gdrive upload /wp-content/ /wordpress/backup --zip
+ *      Success: Upload completed.
  *
  */
 class Gdrive_Command extends \WP_CLI_Command {
@@ -219,18 +226,6 @@ class Gdrive_Command extends \WP_CLI_Command {
 
 		// Show Files
 		self::list_table( $files, true );
-	}
-
-	/**
-	 * Sanitize Date time
-	 *
-	 * @param $time
-	 * @return string
-	 */
-	private static function sanitize_date_time( $time ) {
-		$exp          = explode( "T", $time );
-		$explode_time = explode( ".", $exp[1] );
-		return $exp[0] . " " . $explode_time[0];
 	}
 
 	/**
@@ -688,48 +683,28 @@ class Gdrive_Command extends \WP_CLI_Command {
 	 *
 	 * ## OPTIONS
 	 *
-	 * <name>
-	 * : folder name.
-	 *
-	 * [<path>]
+	 * <path>
 	 * : folder path.
 	 *
 	 * ## EXAMPLES
 	 *
-	 *      # Create a new folder.
-	 *      $ wp gdrive mkdir music /common/
+	 *      # Create a new folder in root.
+	 *      $ wp gdrive mkdir wordpress
+	 *
+	 *      # Create a Nested Folder.
+	 *      $ wp gdrive mkdir wordpress/wp-content/plugins
 	 *
 	 * @when before_wp_load
 	 */
 	function mkdir( $_, $assoc ) {
 
-		// Show Loading
 		WP_CLI_Helper::pl_wait_start();
-
-		// Check Exist Path
-		if ( ! isset( $_[1] ) || ( isset( $_[1] ) and ( trim( $_[1] ) == "/" || trim( $_[1] ) == "\\" || trim( $_[1] ) == "root" || trim( $_[1] ) == "home" ) ) ) {
-			$ParentId = 'root';
-		} else {
-			$path_id = WP_CLI_Google_Drive::get_id_by_path( $_[1] );
-			if ( $path_id === false ) {
-				WP_CLI::error( "The '" . $_[1] . "' is not found in your Google Drive." );
-			} else {
-				// Check is file not folder
-				if ( $path_id['mimeType'] != WP_CLI_Google_Drive::$folder_mime_type ) {
-					WP_CLI::error( "Your '" . $_[1] . "' path includes the file." );
-				} else {
-					$ParentId = $path_id['id'];
-				}
-			}
-		}
-
-		// Create folder
-		$folder = WP_CLI_Google_Drive::create_folder( array( 'name' => trim( $_[0] ), 'parentId' => $ParentId ) );
+		$folder = WP_CLI_Google_Drive::make_folder_by_path( trim( $_[0] ) );
 		WP_CLI_Helper::pl_wait_end();
 		if ( isset( $folder['error'] ) ) {
 			WP_CLI::error( $folder['message'] );
 		} else {
-			WP_CLI::success( "Created '" . $_[0] . "' folder in '" . ( $ParentId == "root" ? $ParentId : trim( $_[1] ) ) . "'." );
+			WP_CLI::success( "Created folder." );
 		}
 	}
 
@@ -790,10 +765,10 @@ class Gdrive_Command extends \WP_CLI_Command {
 	 * ## OPTIONS
 	 *
 	 * <path>
-	 * : The path of file for Download.
+	 * : The path of file for Download from Google Drive.
 	 *
 	 * [<saveTo>]
-	 * : The address where the file will be saved.
+	 * : The address where the file will be saved in your machine.
 	 *
 	 * [--name=<file_name>]
 	 * : New file name to save.
@@ -873,7 +848,10 @@ class Gdrive_Command extends \WP_CLI_Command {
 
 		// Set Global File
 		if ( isset( $file['size'] ) ) {
-			$GLOBALS['GOOGLE_DRIVE_STREAM_BYTE'] = $file['size'];
+			$GLOBALS['WP_CLI_GOOGLE_DRIVE_STREAM'] = array(
+				'size' => $file['size'],
+				'type' => 'Download'
+			);
 		}
 
 		// Download Original File
@@ -884,7 +862,7 @@ class Gdrive_Command extends \WP_CLI_Command {
 				'fileId'   => $file['id'],
 				'path'     => $saveTo,
 				'filename' => $file_name,
-				'hook'     => array( __CLASS__, "cli_download_progress" )
+				'hook'     => array( __CLASS__, "progress" )
 			) );
 			if ( isset( $download_file['error'] ) ) {
 				WP_CLI::error( $download_file['message'] );
@@ -943,7 +921,7 @@ class Gdrive_Command extends \WP_CLI_Command {
 					'path'     => $saveTo,
 					'filename' => $file_inf['filename'],
 					'mimeType' => $file_inf['mimeType'],
-					'hook'     => array( __CLASS__, "cli_download_progress" )
+					'hook'     => array( __CLASS__, "progress" )
 				) );
 				if ( isset( $download_file['error'] ) ) {
 					WP_CLI::error( $download_file['message'] );
@@ -955,11 +933,155 @@ class Gdrive_Command extends \WP_CLI_Command {
 	}
 
 	/**
-	 * Show List Table Of Files
+	 * Upload a file.
 	 *
-	 * @param array $files
-	 * @param bool $show_status
+	 * ## OPTIONS
+	 *
+	 * <path>
+	 * : The path of file or folder for Upload.
+	 *
+	 * [<UploadTo>]
+	 * : The path dir where the file will be saved in Google Drive.
+	 *
+	 * [--name=<file_name>]
+	 * : New file name to save.
+	 *
+	 * [--zip]
+	 * : Create Zip file before uploading.
+	 *
+	 * ## EXAMPLES
+	 *
+	 *      # Upload backup.zip file to root dir in Google Drive.
+	 *      $ wp gdrive upload backup.zip
+	 *      Success: Upload completed.
+	 *
+	 *      # Automatic create zip archive from the /wp-content/ folder and upload to custom dir.
+	 *      $ wp gdrive upload /wp-content/ /wordpress/backup --zip
+	 *      Success: Upload completed.
+	 *
+	 *      # Upload with custom name.
+	 *      $ wp gdrive upload backup.zip --name=wordpress.zip
+	 *      Success: Upload completed.
+	 *
+	 * @when before_wp_load
+	 * @alias send
 	 */
+	function upload( $_, $assoc ) {
+
+		// Show Please Wait
+		WP_CLI_Helper::pl_wait_start();
+
+		// Get Google Cache Path dir
+		$cache_dir = WP_CLI_Google_Drive::get_cache_dir();
+		if ( $cache_dir['status'] === false ) {
+			WP_CLI_Helper::pl_wait_end();
+			WP_CLI::error( $cache_dir['message'] );
+		} else {
+			$cache_dir = $cache_dir['path'];
+		}
+
+		// Prepare SaveTo Google Drive Path
+		$upload_to      = 'root';
+		$upload_to_path = '/';
+		if ( isset( $_[1] ) ) {
+
+			// Check is root Google Drive
+			if ( trim( $_[1] ) == "/" || trim( $_[1] ) == "\\" || trim( $_[1] ) == "root" || trim( $_[1] ) == "home" ) {
+				$upload_to = 'root';
+			} else {
+
+				// Create Dir for Custom Path
+				$google_dir = WP_CLI_Google_Drive::make_folder_by_path( trim( $_[1] ) );
+				if ( isset( $google_dir['error'] ) ) {
+					WP_CLI_Helper::pl_wait_end();
+					WP_CLI::error( $google_dir['message'] );
+				}
+
+				// Set Folder ID
+				$upload_to_path = ltrim( WP_CLI_Google_Drive::sanitize_path( trim( $_[1] ) ), "/" );
+				$upload_to      = $google_dir['id'];
+			}
+		}
+
+		// Prepare File Path
+		$file_path = \WP_CLI_FileSystem::path_join( WP_CLI_Util::getcwd(), WP_CLI_Google_Drive::sanitize_path( trim( $_[0] ) ) );
+		if ( ! file_exists( $file_path ) ) {
+			WP_CLI_Helper::pl_wait_end();
+			WP_CLI::error( 'File Path not found.' );
+		}
+		$path_info = pathinfo( $file_path );
+
+		// Check File path is dir or file
+		$type = ( is_dir( $file_path ) ? 'dir' : 'file' );
+
+		// Upload File
+		if ( $type == "file" ) {
+
+			// Check File name
+			$filename = basename( $file_path );
+			if ( isset( $assoc['name'] ) ) {
+				$filename = preg_replace( WP_CLI_Google_Drive::$preg_filename, '', $assoc['name'] );
+			}
+
+			// Check Zip File
+			if ( isset( $assoc['zip'] ) and isset( $path_info['extension'] ) and $path_info['extension'] != "zip" ) {
+
+				// Create Archive From File
+				$ZIP = \WP_CLI_FileSystem::zip_archive_file( array(
+					'new_name' => $filename,
+					'saveTo'   => $cache_dir,
+					'filepath' => $file_path
+				) );
+				if ( $ZIP['status'] === false ) {
+					WP_CLI_Helper::pl_wait_end();
+					WP_CLI::error( $ZIP['message'] );
+				}
+
+				// Get New file Path
+				$file_path = $ZIP['zip_path'];
+				$filename  = $ZIP['name'];
+			}
+
+			// Check Exist Files in Google Drive
+			$gdrive_file_path = rtrim( $upload_to_path, "/" ) . "/" . $filename;
+			$exist_file       = WP_CLI_Google_Drive::get_id_by_path( $gdrive_file_path );
+			if ( $exist_file != false ) {
+				self::clear_cache();
+				WP_CLI::error( "The '" . $gdrive_file_path . "' is now exist in your Google Drive." );
+			}
+
+			// Set Global Stream
+			$GLOBALS['WP_CLI_GOOGLE_DRIVE_STREAM'] = array(
+				'size' => filesize( $file_path ),
+				'type' => "Upload $filename"
+			);
+
+			// Upload File
+			WP_CLI_Helper::pl_wait_end();
+			$upload_file = self::curl_upload( array(
+				'parentId'  => $upload_to,
+				'file_path' => $file_path,
+				'new_name'  => $filename
+			) );
+			self::clear_cache();
+			if ( isset( $upload_file['error'] ) ) {
+				WP_CLI::error( $upload_file['message'] );
+			} else {
+				WP_CLI::success( "Uploaded '$filename' file." . ( isset( $upload_file['data']['id'] ) ? WP_CLI_Helper::color( " [fileId: " . $upload_file['data']['id'] . "]", "B" ) : str_repeat( " ", 20 ) ) );
+			}
+
+		}
+
+
+	}
+
+	public static function clear_cache() {
+		$clean = WP_CLI_Google_Drive::clear_cache();
+		if ( ! $clean['status'] ) {
+			WP_CLI::error( $clean['message'] );
+		}
+	}
+
 	private static function list_table( $files = array(), $show_status = true ) {
 
 		// Remove Please Wait
@@ -1019,6 +1141,12 @@ class Gdrive_Command extends \WP_CLI_Command {
 		WP_CLI_Helper::create_table( $list );
 	}
 
+	private static function sanitize_date_time( $time ) {
+		$exp          = explode( "T", $time );
+		$explode_time = explode( ".", $exp[1] );
+		return $exp[0] . " " . $explode_time[0];
+	}
+
 	public static function save_file( $full_path, $assoc ) {
 
 		$path_info = pathinfo( $full_path );
@@ -1037,12 +1165,90 @@ class Gdrive_Command extends \WP_CLI_Command {
 
 	}
 
-	public static function cli_download_progress( $data, $response_bytes, $response_byte_limit ) {
-		if ( isset( $GLOBALS['GOOGLE_DRIVE_STREAM_BYTE'] ) ) {
-			$p = ceil( round( ( $response_bytes / $GLOBALS['GOOGLE_DRIVE_STREAM_BYTE'] ) * 100, 2 ) );
-			echo WP_CLI_Helper::color( "Download: " . \WP_CLI_FileSystem::size_format( $response_bytes, 2 ) . " / " . \WP_CLI_FileSystem::size_format( $GLOBALS['GOOGLE_DRIVE_STREAM_BYTE'] ), "Y" ) . " " . WP_CLI_Helper::color( "[$p%]", "B" ) . "        \r";
+	public static function progress( $data, $response_bytes, $response_byte_limit ) {
+		if ( isset( $GLOBALS['WP_CLI_GOOGLE_DRIVE_STREAM'] ) ) {
+			$p = ceil( round( ( $response_bytes / $GLOBALS['WP_CLI_GOOGLE_DRIVE_STREAM']['size'] ) * 100, 2 ) );
+			echo WP_CLI_Helper::color( $GLOBALS['WP_CLI_GOOGLE_DRIVE_STREAM']['type'] . ": " . \WP_CLI_FileSystem::size_format( $response_bytes, 2 ) . " / " . \WP_CLI_FileSystem::size_format( $GLOBALS['WP_CLI_GOOGLE_DRIVE_STREAM']['size'] ), "Y" ) . " " . WP_CLI_Helper::color( "[$p%]", "B" ) . "        \r";
 		}
 	}
 
+	private static function curl_upload( $args = array() ) {
+
+		$default = array(
+			'access_token' => WP_CLI_Google_Drive::access_token(),
+			'parentId'     => '',
+			'file_path'    => '',
+			'new_name'     => ''
+		);
+		$arg     = WP_CLI_Util::parse_args( $args, $default );
+
+		// Create New Resume Upload Link
+		$file = array(
+			'name'    => basename( $arg['file_path'] ),
+			'parents' => array( $arg['parentId'] )
+		);
+
+		// Check new name for File
+		if ( ! empty( $arg['new_name'] ) ) {
+			$file['name'] = preg_replace( WP_CLI_Google_Drive::$preg_filename, '', $arg['new_name'] );
+		}
+
+		$request = \WP_CLI\Utils\http_request( "POST", WP_CLI_Google_Drive::$UploadUrl . '/files?uploadType=resumable', json_encode( $file ), array_merge( WP_CLI_Google_Drive::$json_content_type, WP_CLI_Google_Drive::$json_header_request, array( 'Authorization' => WP_CLI_Google_Drive::$auth_header . ' ' . $arg['access_token'] ) ), array( 'timeout' => WP_CLI_Google_Drive::$request_timeout ) );
+		if ( 200 === $request->status_code ) {
+
+			// Get Upload Link
+			$upload_url = '';
+			$per_line   = explode( "\n", $request->raw );
+			foreach ( $per_line as $line ) {
+				if ( substr( strtolower( trim( $line ) ), 0, 8 ) == "location" ) {
+					$upload_url = str_ireplace( "Location: ", "", $line );
+				}
+			}
+
+			// Check Empty Upload Url
+			if ( empty( $upload_url ) ) {
+				return array( 'error' => true, 'message' => "Problem get upload url. please try again." );
+			}
+
+			// Sanitize Upload Url
+			$upload_url = str_replace( array( ' ', "\t", "\n", "\r" ), '', $upload_url );
+
+			// Upload File to Google Drive
+			$headers   = array();
+			$headers[] = "Content-Type: application/json";
+			$headers[] = 'Authorization: ' . WP_CLI_Google_Drive::$auth_header . ' ' . $arg['access_token'];
+
+			$ch = curl_init();
+			curl_setopt( $ch, CURLOPT_HEADER, false );
+			curl_setopt( $ch, CURLOPT_URL, trim( $upload_url ) );
+			curl_setopt( $ch, CURLOPT_HTTPHEADER, $headers );
+			curl_setopt( $ch, CURLOPT_CUSTOMREQUEST, "PUT" );
+			curl_setopt( $ch, CURLOPT_BINARYTRANSFER, true );
+			curl_setopt( $ch, CURLOPT_POSTFIELDS, file_get_contents( $arg['file_path'] ) );
+			curl_setopt( $ch, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4 );
+			curl_setopt( $ch, CURLOPT_RETURNTRANSFER, true );
+			curl_setopt( $ch, CURLOPT_SSL_VERIFYPEER, false );
+			curl_setopt( $ch, CURLOPT_CONNECTTIMEOUT, 0 );
+			curl_setopt( $ch, CURLOPT_TIMEOUT, 0 );
+			curl_setopt( $ch, CURLOPT_PROGRESSFUNCTION, array( __CLASS__, "curl_progress" ) );
+			curl_setopt( $ch, CURLOPT_NOPROGRESS, false );
+			$result = curl_exec( $ch );
+			if ( curl_errno( $ch ) ) {
+				return array( 'error' => true, 'message' => 'Request Error - ' . curl_error( $ch ) );
+			}
+			curl_close( $ch );
+			$jsonData = json_decode( $result, true );
+			return array( 'status' => true, 'data' => $jsonData );
+		}
+
+		return WP_CLI_Google_Drive::$failed_connecting;
+	}
+
+	public static function curl_progress( $resource, $download_size, $downloaded, $upload_size, $uploaded ) {
+		if ( isset( $GLOBALS['WP_CLI_GOOGLE_DRIVE_STREAM'] ) ) {
+			$p = ceil( round( ( $uploaded / $GLOBALS['WP_CLI_GOOGLE_DRIVE_STREAM']['size'] ) * 100, 2 ) );
+			echo WP_CLI_Helper::color( $GLOBALS['WP_CLI_GOOGLE_DRIVE_STREAM']['type'] . ": " . \WP_CLI_FileSystem::size_format( $uploaded, 2 ) . " / " . \WP_CLI_FileSystem::size_format( $GLOBALS['WP_CLI_GOOGLE_DRIVE_STREAM']['size'] ), "Y" ) . " " . WP_CLI_Helper::color( "[$p%]", "B" ) . "            \r";
+		}
+	}
 
 }

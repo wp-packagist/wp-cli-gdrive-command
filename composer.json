@@ -25,7 +25,9 @@
   },
   "require": {
     "php": "^5.5 || ^7.0",
-    "wp-packagist/wp-cli-helper": "dev-master"
+    "wp-packagist/wp-cli-helper": "dev-master",
+    "ext-json": "*",
+    "ext-curl": "*"
   },
   "extra": {
     "commands": [
@@ -41,7 +43,8 @@
       "gdrive trash",
       "gdrive mkdir",
       "gdrive restore",
-      "gdrive get"
+      "gdrive get",
+      "gdrive upload"
     ]
   },
   "require-dev": {
