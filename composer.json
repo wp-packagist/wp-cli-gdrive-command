@@ -44,7 +44,8 @@
       "gdrive mkdir",
       "gdrive restore",
       "gdrive get",
-      "gdrive upload"
+      "gdrive upload",
+      "gdrive storage"
     ]
   },
   "require-dev": {

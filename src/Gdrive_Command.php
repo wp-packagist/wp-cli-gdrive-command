@@ -19,6 +19,9 @@ use WP_CLI_Util;
  *      # Show list of files and folder in root dir
  *      $ wp gdrive ls
  *
+ *      # Show Google Drive Storage
+ *      $ wp gdrive storage
+ *
  *      # remove file with custom path
  *      $ wp gdrive rm /folder/file.zip
  *      Success: Removed File.
@@ -161,6 +164,45 @@ class Gdrive_Command extends \WP_CLI_Command {
 					}
 					WP_CLI::success( "User authentication verified." );
 				}
+			}
+		}
+	}
+
+	/**
+	 * Verify user identity on Google.
+	 *
+	 * ## OPTIONS
+	 *
+	 * [--force]
+	 * : force change user auth.
+	 *
+	 * ## EXAMPLES
+	 *
+	 *      # User authentication
+	 *      $ wp gdrive auth
+	 *      Success: User authentication verified.
+	 *
+	 *      # change gmail account
+	 *      $ wp gdrive auth --force
+	 *
+	 * @when before_wp_load
+	 * @alias about
+	 */
+	function storage( $_, $assoc ) {
+		WP_CLI_Helper::pl_wait_start();
+		$about = WP_CLI_Google_Drive::about();
+		WP_CLI_Helper::pl_wait_end();
+		if ( isset( $about['error'] ) ) {
+			WP_CLI::error( $about['message'] );
+		} else {
+			if ( isset( $about['user']['displayName'] ) ) {
+				WP_CLI::line( "displayName: " . $about['user']['displayName'] );
+			}
+			if ( isset( $about['user']['emailAddress'] ) ) {
+				WP_CLI::line( "emailAddress: " . $about['user']['emailAddress'] );
+			}
+			foreach ( $about['storageQuota'] as $key => $value ) {
+				WP_CLI::line( "$key: " . \WP_CLI_FileSystem::size_format( $value ) );
 			}
 		}
 	}
