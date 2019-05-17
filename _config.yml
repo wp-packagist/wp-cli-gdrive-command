@@ -1,4 +1,8 @@
 theme: jekyll-theme-minimal
+title: [The title of your site]
+description: [A short description of your site's purpose]
+logo: [Location of the logo]
+show_downloads: true
 plugins:
   - jekyll-relative-links
 relative_links:
