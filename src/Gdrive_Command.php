@@ -949,6 +949,9 @@ class Gdrive_Command extends \WP_CLI_Command {
 	 * [--zip]
 	 * : Create Zip file before uploading.
 	 *
+	 * [--force]
+	 * : Force upload even if it already exists.
+	 *
 	 * ## EXAMPLES
 	 *
 	 *      # Upload backup.zip file to root dir in Google Drive.
@@ -1044,8 +1047,8 @@ class Gdrive_Command extends \WP_CLI_Command {
 
 			// Check Exist Files in Google Drive
 			$gdrive_file_path = rtrim( $upload_to_path, "/" ) . "/" . $filename;
-			$exist_file       = WP_CLI_Google_Drive::get_id_by_path( $gdrive_file_path );
-			if ( $exist_file != false ) {
+			$_exist           = WP_CLI_Google_Drive::get_id_by_path( $gdrive_file_path );
+			if ( $_exist != false and ! isset( $assoc['force'] ) ) {
 				self::clear_cache();
 				WP_CLI::error( "The '" . $gdrive_file_path . "' is now exist in your Google Drive." );
 			}
@@ -1070,8 +1073,174 @@ class Gdrive_Command extends \WP_CLI_Command {
 				WP_CLI::success( "Uploaded '$filename' file." . ( isset( $upload_file['data']['id'] ) ? WP_CLI_Helper::color( " [fileId: " . $upload_file['data']['id'] . "]", "B" ) : str_repeat( " ", 20 ) ) );
 			}
 
-		}
+		} else {
 
+			//if dir and Zip Archived Upload
+			if ( isset( $assoc['zip'] ) ) {
+
+				// Check File name
+				$filename = basename( $file_path );
+				if ( isset( $assoc['name'] ) ) {
+					$filename = preg_replace( WP_CLI_Google_Drive::$preg_filename, '', $assoc['name'] );
+				}
+
+				// Create Archive From File
+				$ZIP = \WP_CLI_FileSystem::create_zip( array(
+					'saveTo'   => $cache_dir,
+					'new_name' => $filename,
+					'source'   => $file_path
+				) );
+				if ( $ZIP['status'] === false ) {
+					WP_CLI_Helper::pl_wait_end();
+					WP_CLI::error( $ZIP['message'] );
+				}
+
+				// Get New file Path
+				$file_path = $ZIP['zip_path'];
+				$filename  = $ZIP['name'];
+
+				// Check Exist Files in Google Drive
+				$gdrive_file_path = rtrim( $upload_to_path, "/" ) . "/" . $filename;
+				$_exist           = WP_CLI_Google_Drive::get_id_by_path( $gdrive_file_path );
+				if ( $_exist != false and ! isset( $assoc['force'] ) ) {
+					self::clear_cache();
+					WP_CLI::error( "The '" . $gdrive_file_path . "' is now exist in your Google Drive." );
+				}
+
+				// Set Global Stream
+				$GLOBALS['WP_CLI_GOOGLE_DRIVE_STREAM'] = array(
+					'size' => filesize( $file_path ),
+					'type' => "Upload $filename"
+				);
+
+				// Upload File
+				WP_CLI_Helper::pl_wait_end();
+				$upload_file = self::curl_upload( array(
+					'parentId'  => $upload_to,
+					'file_path' => $file_path,
+					'new_name'  => $filename
+				) );
+				self::clear_cache();
+				if ( isset( $upload_file['error'] ) ) {
+					WP_CLI::error( $upload_file['message'] );
+				} else {
+					WP_CLI::success( "Uploaded '$filename' file." . ( isset( $upload_file['data']['id'] ) ? WP_CLI_Helper::color( " [fileId: " . $upload_file['data']['id'] . "]", "B" ) : str_repeat( " ", 20 ) ) );
+				}
+
+			} else {
+
+				// If Upload Any File or Folder
+				$_is_upload = false;
+
+				// remove Please Wait
+				WP_CLI_Helper::pl_wait_end();
+
+				// Upload All Files From Folder
+				$list_files = \WP_CLI_FileSystem::get_dir_contents( $file_path, true );
+				if ( isset( $list_files['status'] ) and $list_files['status'] === false ) {
+					WP_CLI::error( $list_files['message'] );
+				}
+
+				// Set Max Upload file in One Request
+				if ( count( $list_files ) > 100 ) {
+					WP_CLI::confirm( "There are " . WP_CLI_Helper::color( number_format( count( $list_files ) ), "B" ) . " files in your folder.Are you sure you want to upload this file number?" );
+				}
+
+				// Separate Dir From File
+				$directory = array();
+				$files     = array();
+				foreach ( $list_files as $file ) {
+					if ( is_dir( $file ) ) {
+						$directory[] = $file;
+					} else {
+						$files[] = $file;
+					}
+				}
+
+				// Show Please wait
+				WP_CLI_Helper::pl_wait_start();
+
+				// First Create Folder List
+				foreach ( $directory as $file ) {
+
+					// Get realpath
+					$real_path = str_ireplace( $file_path, "", \WP_CLI_FileSystem::normalize_path( $file ) );
+
+					// Path in Google Drive
+					$path_in_google_drive = \WP_CLI_FileSystem::path_join( $upload_to_path, $real_path );
+
+					// Check Exist in Google Drive
+					$_exist = WP_CLI_Google_Drive::get_id_by_path( $path_in_google_drive );
+					if ( $_exist === false ) {
+
+						WP_CLI_Helper::pl_wait_start();
+						$folder = WP_CLI_Google_Drive::make_folder_by_path( $path_in_google_drive );
+						WP_CLI_Helper::pl_wait_end();
+						if ( isset( $folder['error'] ) ) {
+							WP_CLI::error( $folder['message'] );
+						} else {
+							$_is_upload = true;
+							WP_CLI::line( "- Created '$path_in_google_drive' folder." );
+						}
+					}
+
+				}
+
+				// Second Upload files
+				foreach ( $files as $file ) {
+
+					// Get realpath
+					$real_path = str_ireplace( $file_path, "", \WP_CLI_FileSystem::normalize_path( $file ) );
+
+					// Path in Google Drive
+					$path_in_google_drive = \WP_CLI_FileSystem::path_join( $upload_to_path, $real_path );
+
+					// Check Exist in Google Drive
+					$_exist = WP_CLI_Google_Drive::get_id_by_path( $path_in_google_drive );
+					if ( $_exist != false and ! isset( $assoc['force'] ) ) {
+						WP_CLI::line( "- The '" . $path_in_google_drive . "' is now exist." );
+					} else {
+
+						// Get base File name
+						$filename = basename( $file );
+
+						// Set Global Stream
+						$GLOBALS['WP_CLI_GOOGLE_DRIVE_STREAM'] = array(
+							'size' => filesize( $file ),
+							'type' => "Upload $filename"
+						);
+
+						// Get Parent ID
+						$Upload_To_Folder = str_ireplace( $filename, "", $path_in_google_drive );
+						$_exist           = WP_CLI_Google_Drive::get_id_by_path( $Upload_To_Folder );
+						if ( $_exist != false ) {
+
+							// Upload File
+							WP_CLI_Helper::pl_wait_end();
+							$upload_file = self::curl_upload( array(
+								'parentId'  => $_exist['id'],
+								'file_path' => $file,
+								'new_name'  => $filename
+							) );
+							if ( isset( $upload_file['error'] ) ) {
+								WP_CLI::error( $upload_file['message'] );
+							} else {
+								$_is_upload = true;
+								WP_CLI::line( "- Uploaded '$path_in_google_drive' file." . ( isset( $upload_file['data']['id'] ) ? WP_CLI_Helper::color( " [fileId: " . $upload_file['data']['id'] . "]", "B" ) : str_repeat( " ", 20 ) ) );
+							}
+
+						}
+
+					}
+
+				}
+
+				if ( $_is_upload ) {
+					WP_CLI::success( "Upload completed." );
+				}
+			}
+
+		}
 
 	}
 
