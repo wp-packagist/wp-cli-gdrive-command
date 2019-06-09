@@ -355,6 +355,7 @@ UploadTo
 --force
 : Force upload even if it already exists.
 
+---
 
 Upload backup.zip file to root dir in Google Drive:
 
