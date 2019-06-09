@@ -17,24 +17,28 @@ Step 1 : Go to [Google Developers console](https://console.developers.google.com
 
 <p align="center">
 <img src="https://raw.githubusercontent.com/wp-packagist/wp-cli-gdrive-command/master/screenshot/step-1.jpg" alt="Create new Project in Google Console">
+ <br>
 </p>
  
  Step 2 : Create OAuth client ID
  
  <p align="center">
  <img src="https://raw.githubusercontent.com/wp-packagist/wp-cli-gdrive-command/master/screenshot/step-2.jpg" alt="OAuth client ID in Google developer">
+ <br>
  </p>
  
  you can select Other type for project.
  
   <p align="center">
   <img src="https://raw.githubusercontent.com/wp-packagist/wp-cli-gdrive-command/master/screenshot/step-3.jpg" alt="OAuth client ID in Google developer">
+ <br>
   </p>
   
   then copy your Client Id and Client secret.
   
    <p align="center">
     <img src="https://raw.githubusercontent.com/wp-packagist/wp-cli-gdrive-command/master/screenshot/step-4.jpg" alt="Get Client Id and Client Secret">
+ <br>
     </p>
   
   Step 3 : run command and enter your Client id and Client secret.
@@ -120,13 +124,17 @@ wp gdrive mkdir wordpress/new-project/backup
 
 ### Download File
 
+```
+wp gdrive get <path> <save-to> [--name=new_name] [--e]
+```
+
 Download backup.zip file from root dir in Google Drive:
 
 ```
 wp gdrive get backup.zip
 ```
 
-Download backup.zip file and save to custom dir:
+Download backup.zip file and save to custom dir with `package.zip` name:
 
 ```
 wp gdrive get backup.zip /folder/ --name=package.zip
@@ -267,9 +275,6 @@ wp gdrive trash
 wp gdrive trash --clear
 ```
 
-
-
-
 ### Restore Files or folder
 
 use this command:
@@ -284,8 +289,70 @@ for example, restore `backup` folder from Google drive trash:
 wp gdrive restore /backup/
 ```
 
+### Get Your Storage
+
+for get your Storage:
+
+```
+wp gdrive storage
+```
+
+or
+
+```
+wp gdrive about
+```
+
+### Upload Files or Folder
+
+```
+ wp gdrive upload <path> [<UploadTo>] [--name=<file_name>] [--zip] [--force]
+```
+
+<path>
+ : The path of file or folder for Upload.
+ 
+[<UploadTo>]
+: The path dir where the file will be saved in Google Drive.
+
+[--name=<file_name>]
+: New file name to save.
+
+[--zip]
+: Create Zip file before uploading.
+
+[--force]
+: Force upload even if it already exists.
 
 
+Upload backup.zip file to root dir in Google Drive:
+
+```
+wp gdrive upload backup.zip
+```
+
+Automatic create zip archive from the /wp-content/ folder and upload to custom dir:
+
+```
+wp gdrive upload /wp-content/ /wordpress/backup --zip
+```
+
+Upload with custom name.
+
+```
+wp gdrive upload backup.zip --name=wordpress.zip
+```
+
+Get Backup From WordPress Database and Upload to Google Drive:
+
+```
+wp db export backup.sql
+wp gdrive upload backup.sql /backup/wordpress
+```
+
+## Author
+
+fdf
 
 
 ## Contributing
