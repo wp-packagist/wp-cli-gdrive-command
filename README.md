@@ -350,7 +350,7 @@ path
 UploadTo
 : The path dir where the file will be saved in Google Drive.
 
---name=<file_name>
+--name
 : New file name to save.
 
 --zip
