@@ -2,10 +2,36 @@
 
 Use Google Drive Storage in WordPress WP-CLI Command line for Backup/Restore Files.
 
+<br>
 <p align="center">
 <img src="https://raw.githubusercontent.com/wp-packagist/wp-cli-gdrive-command/master/screenshot/logo.png" alt="WP-CLI Google Drive">
 </p>
 
+- [WP-CLI Google Drive Command](#wp-cli-google-drive-command)
+  * [Installation](#installation)
+    + [Authenticate Users](#authenticate-users)
+  * [Structure](#structure)
+  * [Commands](#commands)
+    + [List of files and folder](#list-of-files-and-folder)
+    + [Create folder in Google Drive](#create-folder-in-google-drive)
+      - [Nested Directory](#nested-directory)
+    + [Download File](#download-file)
+      - [Auto Extract after download](#auto-extract-after-download)
+    + [Copy files or Folder](#copy-files-or-folder)
+    + [Move files or Folder](#move-files-or-folder)
+    + [Remove Files or folder](#remove-files-or-folder)
+    + [Rename a file or folder](#rename-a-file-or-folder)
+    + [Get Share Link For a files or folder](#get-share-link-for-a-files-or-folder)
+    + [Private a files or folder](#private-a-files-or-folder)
+    + [List of files and folder in trash](#list-of-files-and-folder-in-trash)
+      - [Clear all files in trash](#clear-all-files-in-trash)
+    + [Restore Files or folder](#restore-files-or-folder)
+    + [Get Your Storage](#get-your-storage)
+    + [Upload Files or Folder](#upload-files-or-folder)
+  * [Author](#author)
+  * [Contributing](#contributing)
+  
+  
 ## Installation
 
 you can install this package with `wp package install wp-packagist/wp-cli-gdrive-command`
@@ -352,11 +378,13 @@ wp gdrive upload backup.sql /backup/wordpress
 
 ## Author
 
-
-
-
-
-
+<p align="center">
+<img src="https://raw.githubusercontent.com/wp-packagist/wp-cli-gdrive-command/master/screenshot/author.png" alt="Mehrshad Darzi">
+ </p>
+ <p align="center">Mehrshad Darzi</p>
+ <p align="center">PHP Fullstack and WordPress Developer</p>
+ <p align="center"><a href="https://www.linkedin.com/in/mehrshaddarzi/" target="_blank"> Hire Me Remote work !</a></p>
+ <p align="center">Mehrshad198 [at] gmail.com</p>
 
 ## Contributing
 
