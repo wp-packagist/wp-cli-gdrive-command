@@ -1,7 +1,7 @@
 theme: jekyll-theme-cayman
-title: [The title of your site]
-description: [A short description of your site's purpose]
-logo: https://raw.githubusercontent.com/mehrshaddarzi/wp-cli-reference-command/master/screenshot-1.jpg
+title: [Google Drive For WordPress command Line (WP-CLI)]
+description: [Backup/Restore WordPress in Google Drive Storage]
+logo: ''
 show_downloads: true
 plugins:
   - jekyll-relative-links
