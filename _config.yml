@@ -1,6 +1,6 @@
 theme: jekyll-theme-cayman
-title: [Google Drive For WordPress command Line (WP-CLI)]
-description: [Backup/Restore WordPress in Google Drive Storage]
+title: Backup and Restore WordPress in Google Drive service
+description: Google Drive Command for WP-CLI
 logo: ''
 show_downloads: true
 plugins:
