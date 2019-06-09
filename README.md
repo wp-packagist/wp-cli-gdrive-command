@@ -2,6 +2,10 @@
 
 Use Google Drive Storage in WordPress WP-CLI Command line for Backup/Restore Files.
 
+![GitHub](https://img.shields.io/github/license/wp-packagist/wp-cli-gdrive-command.svg)
+![GitHub repo size](https://img.shields.io/github/repo-size/wp-packagist/wp-cli-gdrive-command.svg)
+![GitHub release](https://img.shields.io/github/release/wp-packagist/wp-cli-gdrive-command.svg?style=social)
+
 <br>
 <p align="center">
 <img src="https://raw.githubusercontent.com/wp-packagist/wp-cli-gdrive-command/master/screenshot/logo.png" alt="WP-CLI Google Drive">
