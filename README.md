@@ -34,8 +34,13 @@ Use Google Drive Storage in WordPress WP-CLI Command line for Backup/Restore Fil
   
 ## Installation
 
-you can install this package with `wp package install wp-packagist/wp-cli-gdrive-command`
-Installing this package requires WP-CLI v2 or greater. Update to the latest stable release with `wp cli update`.
+you can install this package with:
+
+```
+wp package install wp-packagist/wp-cli-gdrive-command
+```
+
+> Installing this package requires WP-CLI v2 or greater. Update to the latest stable release with `wp cli update`.
 
 ### Authenticate Users
 
@@ -381,10 +386,10 @@ wp gdrive upload backup.sql /backup/wordpress
 <p align="center">
 <img src="https://raw.githubusercontent.com/wp-packagist/wp-cli-gdrive-command/master/screenshot/author.png" alt="Mehrshad Darzi">
  </p>
- <p align="center">Mehrshad Darzi</p>
- <p align="center">PHP Fullstack and WordPress Developer</p>
- <p align="center"><a href="https://www.linkedin.com/in/mehrshaddarzi/" target="_blank"> Hire Me Remote work !</a></p>
- <p align="center">Mehrshad198 [at] gmail.com</p>
+ <p align="center">Mehrshad Darzi
+ <br>PHP Fullstack and WordPress Developer
+ <br><a href="https://www.linkedin.com/in/mehrshaddarzi/" target="_blank"> Hire Me Remote work !</a>
+ <br>Mehrshad198 [at] gmail.com</p>
 
 ## Contributing
 
