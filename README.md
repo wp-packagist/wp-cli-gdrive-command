@@ -275,7 +275,7 @@ wp gdrive share <path>
 for example , get download link /backup/wp.zip file:
 
 ```
-wp gdrive share /backup/.zip
+wp gdrive share /backup/wp.zip
 ```
 
 ### Private a files or folder
@@ -289,7 +289,7 @@ wp gdrive private <path>
 for example , disable download link /backup/wp.zip file:
 
 ```
-wp gdrive private /backup/.zip
+wp gdrive private /backup/wp.zip
 ```
 
 ### List of files and folder in trash
@@ -340,19 +340,19 @@ wp gdrive about
  wp gdrive upload <path> [<UploadTo>] [--name=<file_name>] [--zip] [--force]
 ```
 
-<path>
+path
  : The path of file or folder for Upload.
  
-[<UploadTo>]
+UploadTo
 : The path dir where the file will be saved in Google Drive.
 
-[--name=<file_name>]
+--name=<file_name>
 : New file name to save.
 
-[--zip]
+--zip
 : Create Zip file before uploading.
 
-[--force]
+--force
 : Force upload even if it already exists.
 
 
