@@ -96,70 +96,197 @@ for show list of files from custom path e.g /wordpress/backup
 wp gdrive ls /wordpress/backup
 ```
 
-### 
+### Create folder in Google Drive
 
+For create a folder use :
 
-if your search results from more than one item.
-for example :
+```
+wp gdrive mkdir <path>
+```
 
-````
-wp reference wp_insert_post
-````
+create `backup` folder in root directory:
 
-You will see a list to choose from.
+```
+wp gdrive mkdir backup
+```
 
-![](https://raw.githubusercontent.com/mehrshaddarzi/wp-cli-reference-command/master/screenshot-2.jpg)
+#### Nested Directory
 
-### Custom Search
+you can also create nested dir. for example:
 
-by default WP_CLI reference package search between all WordPress class and functions.
+```
+wp gdrive mkdir wordpress/new-project/backup
+```
 
-if you want the custom search :
+### Download File
 
-````
-wp reference --class=wp_user
-````
+Download backup.zip file from root dir in Google Drive:
+
+```
+wp gdrive get backup.zip
+```
+
+Download backup.zip file and save to custom dir:
+
+```
+wp gdrive get backup.zip /folder/ --name=package.zip
+```
+
+#### Auto Extract after download
+
+Automatic unzip file after download: (use --e flag)
+Download Backup.zip file and extract to /folder/.
+
+```
+wp gdrive get backup.zip /folder/ --e
+```
+
+### Copy files or Folder
+
+```
+wp gdrive copy <path> <new-path>
+```
+
+> `new-path` is only new dir path.
+
+for example copy file:
+
+```
+wp gdrive copy /backup/wp.zip /folder/custom/
+```
+
+or copy folder:
+
+```
+wp gdrive copy /folder/name/ /custom
+```
+
+### Move files or Folder
+
+```
+wp gdrive mv <path> <new-path>
+```
 
 or
 
-````
-wp reference --funcion=wp_insert_post
-````
+```
+wp gdrive move <path> <new-path>
+```
+
+for example:
+
+```
+wp gdrive move /folder/wordpress.zip /folder/custom/
+```
+
+### Remove Files or folder
+
+```
+wp gdrive rm <path> [--trash] [--force]
+```
 
 or
 
-````
-wp reference --method=get_row
-````
+```
+wp gdrive remove <path> [--trash] [--force]
+```
+
+Path    : files or folder path e.g. /backup/wp.zip
+--trash : Move file to trash.
+--force : Force removing file and folder without question.
+
+for example remove wordpress.zip file in root directory and move to trash:
+
+```
+wp gdrive rm wordpress.zip --trash
+```
+
+### Rename a file or folder
+
+```
+wp gdrive ren <path> <new-name>
+```
 
 or
 
-````
-wp reference --hook=admin_footer
-````
+```
+wp gdrive rename <path> <new-name>
+```
+
+for example, rename wp.zip files that stored in backup folder to wordpress.zip:
+
+```
+wp gdrive ren /backup/wp.zip wordpress.zip
+```
+
+rename a folder:
+
+```
+wp gdrive ren /folder/folder/ new_folder_name
+```
+
+### Get Share Link For a files or folder
+
+if you want share a files or folder , and get public link use:
+
+```
+wp gdrive share <path>
+```
+
+for example , get download link /backup/wp.zip file:
+
+```
+wp gdrive share /backup/.zip
+```
+
+### Private a files or folder
+
+after download a files or folder by others, you can private again file or folder:
+
+```
+wp gdrive private <path>
+```
+
+for example , disable download link /backup/wp.zip file:
+
+```
+wp gdrive private /backup/.zip
+```
+
+### List of files and folder in trash
+
+For showing list of all files and folders in Google Drive Trash:
+
+```
+wp gdrive trash
+```
+
+#### Clear all files in trash
+
+```
+wp gdrive trash --clear
+```
 
 
-### Show in Web Browser
 
-you can show WordPress code reference in Web browser after search with :
 
-````
-wp reference --browser
-````
+### Restore Files or folder
 
-### Cache system
+use this command:
 
-by default, WP-CLI cached 100 last searches for speed result. if you want to remove reference cache :
+```
+wp gdrive restore <path>
+```
 
-````
-wp cli cache clear
-````
+for example, restore `backup` folder from Google drive trash:
 
-if you want only remove reference cache :
+```
+wp gdrive restore /backup/
+```
 
-````
-wp reference --clear
-````
+
+
+
 
 ## Contributing
 
