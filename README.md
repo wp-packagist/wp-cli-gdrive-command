@@ -373,6 +373,15 @@ Automatic create zip archive from the /wp-content/ folder and upload to custom d
 wp gdrive upload /wp-content/ /wordpress/backup --zip
 ```
 
+Upload All files from `/wp-content/plugins/my-plugin/docs` to `wordpress/plugin` directory in Google Drive
+
+```
+wp gdrive upload /wp-content/plugins/my-plugin/docs/ /wordpress/plugin --zip
+```
+
+> Number Max files in One Request is 100 files
+
+
 Upload with custom name.
 
 ```
