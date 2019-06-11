@@ -48,35 +48,35 @@ wp package install wp-packagist/wp-cli-gdrive-command
 
 ### Authenticate Users
 
-Step 1 : Go to [Google Developers console](https://console.developers.google.com/) and Create a new project
+Step 1: Go to [Google Developers console](https://console.developers.google.com/) and Create a new project
 
 <p align="center">
 <img src="https://raw.githubusercontent.com/wp-packagist/wp-cli-gdrive-command/master/screenshot/step-1.jpg" alt="Create new Project in Google Console">
  <br>
 </p>
  
- Step 2 : Create OAuth client ID
+ Step 2: Create an OAuth client ID
  
  <p align="center">
  <img src="https://raw.githubusercontent.com/wp-packagist/wp-cli-gdrive-command/master/screenshot/step-2.jpg" alt="OAuth client ID in Google developer">
  <br>
  </p>
  
- you can select Other type for project.
+You can select Other types for the project.
  
   <p align="center">
   <img src="https://raw.githubusercontent.com/wp-packagist/wp-cli-gdrive-command/master/screenshot/step-3.jpg" alt="OAuth client ID in Google developer">
  <br>
   </p>
   
-  then copy your Client Id and Client secret.
+  Then copy your Client Id and Client secret.
   
    <p align="center">
     <img src="https://raw.githubusercontent.com/wp-packagist/wp-cli-gdrive-command/master/screenshot/step-4.jpg" alt="Get Client Id and Client Secret">
  <br>
     </p>
   
-  Step 3 : run command and enter your Client id and Client secret.
+  Step3 : run command and enter your Client id and Client secret.
   
   ```
   wp gdrive auth
@@ -129,21 +129,21 @@ For show list all files and folder in root dir :
 wp gdrive ls
 ```
 
-for show list of files from custom path e.g /wordpress/backup 
+For show list of files from custom path e.g /wordpress/backup 
 
 ```
 wp gdrive ls /wordpress/backup
 ```
 
-### Create folder in Google Drive
+### Create a folder in Google Drive
 
-For create a folder use :
+For creating  a folder use :
 
 ```
 wp gdrive mkdir <path>
 ```
 
-create `backup` folder in root directory:
+create `backup` folder in the root directory:
 
 ```
 wp gdrive mkdir backup
@@ -216,7 +216,7 @@ or
 wp gdrive move <path> <new-path>
 ```
 
-for example:
+For example:
 
 ```
 wp gdrive move /folder/wordpress.zip /folder/custom/
@@ -234,11 +234,11 @@ or
 wp gdrive remove <path> [--trash] [--force]
 ```
 
-Path    : files or folder path e.g. /backup/wp.zip
---trash : Move file to trash.
---force : Force removing file and folder without question.
+Path: files or folder path e.g. /backup/wp.zip
+--trash: Move file to trash.
+--force: Force removing file and folder without question.
 
-for example remove wordpress.zip file in root directory and move to trash:
+For example remove wordpress.zip file in root directory and move to trash:
 
 ```
 wp gdrive rm wordpress.zip --trash
@@ -256,7 +256,7 @@ or
 wp gdrive rename <path> <new-name>
 ```
 
-for example, rename wp.zip files that stored in backup folder to wordpress.zip:
+For example, rename wp.zip files that stored in backup folder to wordpress.zip:
 
 ```
 wp gdrive ren /backup/wp.zip wordpress.zip
@@ -270,13 +270,13 @@ wp gdrive ren /folder/folder/ new_folder_name
 
 ### Get Share Link For a files or folder
 
-if you want share a files or folder , and get public link use:
+If you want to share files or folder and get public link use:
 
 ```
 wp gdrive share <path>
 ```
 
-for example , get download link /backup/wp.zip file:
+for example, get download link /backup/wp.zip file:
 
 ```
 wp gdrive share /backup/wp.zip
@@ -284,19 +284,19 @@ wp gdrive share /backup/wp.zip
 
 ### Private a files or folder
 
-after download a files or folder by others, you can private again file or folder:
+after download files or folder by others, you can private again file or folder:
 
 ```
 wp gdrive private <path>
 ```
 
-for example , disable download link /backup/wp.zip file:
+for example, disable download link /backup/wp.zip file:
 
 ```
 wp gdrive private /backup/wp.zip
 ```
 
-### List of files and folder in trash
+### List of files and folder in the trash
 
 For showing list of all files and folders in Google Drive Trash:
 
@@ -304,7 +304,7 @@ For showing list of all files and folders in Google Drive Trash:
 wp gdrive trash
 ```
 
-#### Clear all files in trash
+#### Clear all files in the trash
 
 ```
 wp gdrive trash --clear
@@ -326,7 +326,7 @@ wp gdrive restore /backup/
 
 ### Get Your Storage
 
-for get your Storage:
+For getting your Storage:
 
 ```
 wp gdrive storage
@@ -382,7 +382,7 @@ wp gdrive upload /wp-content/plugins/my-plugin/docs/ /wordpress/plugin --zip
 > Number Max files in One Request is 100 files
 
 
-Upload with custom name.
+Upload with a custom name.
 
 ```
 wp gdrive upload backup.zip --name=wordpress.zip
