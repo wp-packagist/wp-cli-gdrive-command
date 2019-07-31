@@ -402,7 +402,6 @@ wp gdrive upload backup.sql /backup/wordpress
  </p>
  <p align="center">Mehrshad Darzi
  <br>PHP Fullstack and WordPress Developer
- <br><a href="https://www.linkedin.com/in/mehrshaddarzi/" target="_blank"> Hire Me Remote work !</a>
  <br>Mehrshad198 [at] gmail.com</p>
 
 ## Contributing
