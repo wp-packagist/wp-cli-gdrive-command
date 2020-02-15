@@ -2,6 +2,7 @@
 
 Use Google Drive Storage in WordPress WP-CLI Command line for Backup/Restore Files.
 
+[![Build Status](https://travis-ci.com/wp-packagist/wp-cli-gdrive-command.svg?branch=master)](https://travis-ci.com/wp-packagist/wp-cli-gdrive-command)
 ![GitHub](https://img.shields.io/github/license/wp-packagist/wp-cli-gdrive-command.svg)
 ![GitHub repo size](https://img.shields.io/github/repo-size/wp-packagist/wp-cli-gdrive-command.svg)
 ![GitHub release](https://img.shields.io/github/release/wp-packagist/wp-cli-gdrive-command.svg?style=social)
@@ -40,7 +41,7 @@ Use Google Drive Storage in WordPress WP-CLI Command line for Backup/Restore Fil
 
 you can install this package with:
 
-```
+```console
 wp package install wp-packagist/wp-cli-gdrive-command
 ```
 
@@ -78,7 +79,7 @@ You can select Other types for the project.
   
   Step3 : run command and enter your Client id and Client secret.
   
-  ```
+  ```console
   wp gdrive auth
   ```
   
@@ -125,13 +126,13 @@ List of WP-CLI gdrive Commands :
 
 For show list all files and folder in root dir :
 
-```
+```console
 wp gdrive ls
 ```
 
 For show list of files from custom path e.g /wordpress/backup 
 
-```
+```console
 wp gdrive ls /wordpress/backup
 ```
 
@@ -139,13 +140,13 @@ wp gdrive ls /wordpress/backup
 
 For creating  a folder use :
 
-```
+```console
 wp gdrive mkdir <path>
 ```
 
 create `backup` folder in the root directory:
 
-```
+```console
 wp gdrive mkdir backup
 ```
 
@@ -153,25 +154,25 @@ wp gdrive mkdir backup
 
 you can also create nested dir. for example:
 
-```
+```console
 wp gdrive mkdir wordpress/new-project/backup
 ```
 
 ### Download File
 
-```
+```console
 wp gdrive get <path> <save-to> [--name=new_name] [--e]
 ```
 
 Download backup.zip file from root dir in Google Drive:
 
-```
+```console
 wp gdrive get backup.zip
 ```
 
 Download backup.zip file and save to custom dir with `package.zip` name:
 
-```
+```console
 wp gdrive get backup.zip /folder/ --name=package.zip
 ```
 
@@ -180,13 +181,13 @@ wp gdrive get backup.zip /folder/ --name=package.zip
 Automatic unzip file after download: (use --e flag)
 Download Backup.zip file and extract to /folder/.
 
-```
+```console
 wp gdrive get backup.zip /folder/ --e
 ```
 
 ### Copy files or Folder
 
-```
+```console
 wp gdrive copy <path> <new-path>
 ```
 
@@ -194,43 +195,43 @@ wp gdrive copy <path> <new-path>
 
 for example copy file:
 
-```
+```console
 wp gdrive copy /backup/wp.zip /folder/custom/
 ```
 
 or copy folder:
 
-```
+```console
 wp gdrive copy /folder/name/ /custom
 ```
 
 ### Move files or Folder
 
-```
+```console
 wp gdrive mv <path> <new-path>
 ```
 
 or
 
-```
+```console
 wp gdrive move <path> <new-path>
 ```
 
 For example:
 
-```
+```console
 wp gdrive move /folder/wordpress.zip /folder/custom/
 ```
 
 ### Remove Files or folder
 
-```
+```console
 wp gdrive rm <path> [--trash] [--force]
 ```
 
 or
 
-```
+```console
 wp gdrive remove <path> [--trash] [--force]
 ```
 
@@ -240,31 +241,31 @@ Path: files or folder path e.g. /backup/wp.zip
 
 For example remove wordpress.zip file in root directory and move to trash:
 
-```
+```console
 wp gdrive rm wordpress.zip --trash
 ```
 
 ### Rename a file or folder
 
-```
+```console
 wp gdrive ren <path> <new-name>
 ```
 
 or
 
-```
+```console
 wp gdrive rename <path> <new-name>
 ```
 
 For example, rename wp.zip files that stored in backup folder to wordpress.zip:
 
-```
+```console
 wp gdrive ren /backup/wp.zip wordpress.zip
 ```
 
-rename a folder:
+Rename a folder:
 
-```
+```console
 wp gdrive ren /folder/folder/ new_folder_name
 ```
 
@@ -272,13 +273,13 @@ wp gdrive ren /folder/folder/ new_folder_name
 
 If you want to share files or folder and get public link use:
 
-```
+```console
 wp gdrive share <path>
 ```
 
 for example, get download link /backup/wp.zip file:
 
-```
+```console
 wp gdrive share /backup/wp.zip
 ```
 
@@ -286,13 +287,13 @@ wp gdrive share /backup/wp.zip
 
 after download files or folder by others, you can private again file or folder:
 
-```
+```console
 wp gdrive private <path>
 ```
 
 for example, disable download link /backup/wp.zip file:
 
-```
+```console
 wp gdrive private /backup/wp.zip
 ```
 
@@ -300,27 +301,27 @@ wp gdrive private /backup/wp.zip
 
 For showing list of all files and folders in Google Drive Trash:
 
-```
+```console
 wp gdrive trash
 ```
 
 #### Clear all files in the trash
 
-```
+```console
 wp gdrive trash --clear
 ```
 
 ### Restore Files or folder
 
-use this command:
+Use this command:
 
-```
+```console
 wp gdrive restore <path>
 ```
 
 for example, restore `backup` folder from Google drive trash:
 
-```
+```console
 wp gdrive restore /backup/
 ```
 
@@ -328,19 +329,19 @@ wp gdrive restore /backup/
 
 For getting your Storage:
 
-```
+```console
 wp gdrive storage
 ```
 
 or
 
-```
+```console
 wp gdrive about
 ```
 
 ### Upload Files or Folder
 
-```
+```console
  wp gdrive upload <path> [<UploadTo>] [--name=<file_name>] [--zip] [--force]
 ```
 
@@ -363,19 +364,19 @@ UploadTo
 
 Upload backup.zip file to root dir in Google Drive:
 
-```
+```console
 wp gdrive upload backup.zip
 ```
 
 Automatic create zip archive from the /wp-content/ folder and upload to custom dir:
 
-```
+```console
 wp gdrive upload /wp-content/ /wordpress/backup --zip
 ```
 
 Upload All files from `/wp-content/plugins/my-plugin/docs` to `wordpress/plugin` directory in Google Drive
 
-```
+```console
 wp gdrive upload /wp-content/plugins/my-plugin/docs/ /wordpress/plugin --zip
 ```
 
@@ -384,27 +385,38 @@ wp gdrive upload /wp-content/plugins/my-plugin/docs/ /wordpress/plugin --zip
 
 Upload with a custom name.
 
-```
+```console
 wp gdrive upload backup.zip --name=wordpress.zip
 ```
 
 Get Backup From WordPress Database and Upload to Google Drive:
 
-```
+```console
 wp db export backup.sql
 wp gdrive upload backup.sql /backup/wordpress
 ```
 
 ## Author
 
-<p align="center">
-<img src="https://raw.githubusercontent.com/wp-packagist/wp-cli-gdrive-command/master/screenshot/author.png" alt="Mehrshad Darzi">
- </p>
- <p align="center">Mehrshad Darzi
- <br>PHP Fullstack and WordPress Developer
- <br>Mehrshad198 [at] gmail.com</p>
+- [Mehrshad Darzi](https://www.linkedin.com/in/mehrshaddarzi/) | PHP Full Stack and WordPress Expert
 
 ## Contributing
 
 We appreciate you taking the initiative to contribute to this project.
+
 Contributing isn’t limited to just code. We encourage you to contribute in the way that best fits your abilities, by writing tutorials, giving a demo at your local meetup, helping other users with their support questions, or revising our documentation.
+
+### Reporting a bug
+
+Think you’ve found a bug? We’d love for you to help us get it fixed.
+Before you create a new issue, you should [search existing issues](https://github.com/wp-packagist/wp-cli-gdrive-command/issues?q=label%3Abug%20) to see if there’s an existing resolution to it, or if it’s already been fixed in a newer version.
+
+### Creating a pull request
+
+Want to contribute a new feature? Please first [open a new issue](https://github.com/wp-packagist/wp-cli-gdrive-command/issues/new) to discuss whether the feature is a good fit for the project.
+
+Once you've decided to commit the time to seeing your pull request through, please follow our guidelines for creating a pull request to make sure it's a pleasant experience:
+
+1. Create a feature branch for each contribution.
+2. Submit your pull request early for feedback.
+3. Follow [PSR-2 Coding Standards](http://www.php-fig.org/psr/psr-2/).
