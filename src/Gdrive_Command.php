@@ -90,14 +90,15 @@ class Gdrive_Command extends \WP_CLI_Command
         WP_CLI_Helper::pl_wait_start();
         $auth = WP_CLI_Google_Drive::auth();
         if ($auth['status'] === true and ! isset($assoc['force'])) {
+            // Check User Token in GDrive
             $user_info = WP_CLI_Google_Drive::get_user_info_by_access_token($auth['access_token']);
+            WP_CLI_Helper::pl_wait_end();
             if ( ! isset($user_info['error'])) {
-                WP_CLI_Helper::pl_wait_end();
                 WP_CLI::line("Name: " . $user_info['name']);
                 WP_CLI::line("Email: " . $user_info['email']);
                 WP_CLI::line("Locale: " . $user_info['locale']);
+                exit;
             }
-            exit;
         }
 
         //Define STDIN
