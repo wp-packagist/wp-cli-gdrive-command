@@ -4,7 +4,7 @@ namespace test\unit;
 
 use PHPUnit\Framework\TestCase;
 
-class GDriveCommandTests extends TestCase
+class GDriveCommandTest extends TestCase
 {
 
     /** @test */
