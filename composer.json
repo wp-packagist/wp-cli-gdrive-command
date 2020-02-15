@@ -49,7 +49,11 @@
     ]
   },
   "require-dev": {
-    "wp-cli/wp-cli": "^2.0"
+    "wp-cli/wp-cli": "^2.0",
+    "phpunit/phpunit": "^4.8"
+  },
+  "scripts": {
+    "test": "phpunit"
   },
   "support": {
     "issues": "https://github.com/wp-packagist/wp-cli-gdrive-command/issues"
