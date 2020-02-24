@@ -1,6 +1,6 @@
 # Changelog
 
-## [1.0.5] - 2020-02-15
+## [1.0.5] - 2020-02-20
 
 - Set Default root directory to upload in GDrive
 
