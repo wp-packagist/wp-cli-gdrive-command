@@ -342,11 +342,11 @@ wp gdrive about
 ### Upload Files or Folder
 
 ```console
- wp gdrive upload <path> [<UploadTo>] [--name=<file_name>] [--zip] [--force]
+ wp gdrive upload [<path>] [<UploadTo>] [--name=<file_name>] [--zip] [--force]
 ```
 
 path
- : The path of file or folder for Upload.
+ : The path of file or folder for Upload. `default is current path`
  
 UploadTo
 : The path dir where the file will be saved in Google Drive.
@@ -361,6 +361,12 @@ UploadTo
 : Force upload even if it already exists.
 
 ---
+
+Automatic create zip file archive file from all root directory and files and upload to GDrive:
+
+```console
+wp gdrive upload --zip
+```
 
 Upload backup.zip file to root dir in Google Drive:
 

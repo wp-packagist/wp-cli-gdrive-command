@@ -972,7 +972,7 @@ class Gdrive_Command extends \WP_CLI_Command
      *
      * ## OPTIONS
      *
-     * <path>
+     * [<path>]
      * : The path of file or folder for Upload.
      *
      * [<UploadTo>]
@@ -1040,6 +1040,9 @@ class Gdrive_Command extends \WP_CLI_Command
         }
 
         // Prepare File Path
+        if ( ! isset($_[0])) {
+            $_[0] = "/";
+        }
         $file_path = \WP_CLI_FileSystem::path_join(WP_CLI_Util::getcwd(), WP_CLI_Google_Drive::sanitize_path(trim($_[0])));
         if ( ! file_exists($file_path)) {
             WP_CLI_Helper::pl_wait_end();
